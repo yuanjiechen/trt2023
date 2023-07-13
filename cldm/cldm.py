@@ -321,9 +321,6 @@ class ControlLDM(LatentDiffusion):
 
         if control_net_use_trt:
 
-            # import pycuda.autoinit
-            # import pycuda.driver as cuda
-            
             device = torch.device("cuda")
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
@@ -331,9 +328,15 @@ class ControlLDM(LatentDiffusion):
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
-                self.shape_list = [[(1, 320, 32, 48), 4], [(1, 640, 16, 24), 2], [(1, 640, 8, 12), 1], [(1, 1280, 8, 12), 2], [(1, 1280, 4, 6), 4]]
-                self.mid_tensors = [torch.zeros(shape, device=device, dtype=torch.float32) for box in self.shape_list for shape, repeat in box for _ in range(repeat)]
-                
+                self.shape_list = [[[1, 320, 32, 48], 3], [[1, 320, 16, 24], 1], [[1, 640, 16, 24], 2], [[1, 640, 8, 12], 1], [[1, 1280, 8, 12], 2], [[1, 1280, 4, 6], 4]]
+
+                self.mid_tensors = [torch.zeros(box[0], device=device, dtype=torch.float32) for box in self.shape_list for _ in range(box[1]) ]
+                print(len(self.mid_tensors))
+                input()
+                # input()
+                # for box in self.mid_tensors:
+                #     print(box.size())
+                # input()
                 # self.stream = cuda.Stream()
                 # for binding in model:
                 #     size = trt.volume(model.get_binding_shape(binding))
@@ -383,7 +386,8 @@ class ControlLDM(LatentDiffusion):
                     
                     memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
             
-
+            print(len(self.mid_tensors))
+            input()
             # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
             # control = [c * scale for c, scale in zip(control, self.control_scales)]
             eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=self.mid_tensors, only_mid_control=self.only_mid_control)
