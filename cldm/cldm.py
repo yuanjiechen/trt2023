@@ -323,7 +323,7 @@ class ControlLDM(LatentDiffusion):
         self.control_scales = [1.0] * 13
 
         if not Path("controlnet_fp16.engine").exists(): control_net_use_trt = False
-        else: control_net_use_trt = True
+        else: control_net_use_trt = False ###################
         if control_net_use_trt:
 
             device = torch.device("cuda")
@@ -390,9 +390,9 @@ class ControlLDM(LatentDiffusion):
                 for out, mid_out in zip(self.outputs, self.mid_tensors):
                     memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
             
-            # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
-            # control = [c * scale for c, scale in zip(control, self.control_scales)]
-            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=self.mid_tensors, only_mid_control=self.only_mid_control)
+            control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
+            control = [c * scale for c, scale in zip(control, self.control_scales)]
+            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
         return eps
 
