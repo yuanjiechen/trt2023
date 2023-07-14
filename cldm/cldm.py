@@ -27,6 +27,7 @@ import numpy as np
 class ControlledUnetModel(UNetModel):
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
+        j = len(control) - 1
         with torch.no_grad():
             t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             emb = self.time_embed(t_emb)
@@ -35,15 +36,16 @@ class ControlledUnetModel(UNetModel):
                 h = module(h, emb, context)
                 hs.append(h)
             h = self.middle_block(h, emb, context)
-
         if control is not None:
-            h += control.pop()
+            h += control[j]#.pop()
+            j -= 1
 
         for i, module in enumerate(self.output_blocks):
             if only_mid_control or control is None:
                 h = torch.cat([h, hs.pop()], dim=1)
             else:
-                h = torch.cat([h, hs.pop() + control.pop()], dim=1)
+                h = torch.cat([h, hs.pop() + control[j]], dim=1)
+                j -= 1
             h = module(h, emb, context)
 
         h = h.type(x.dtype)
@@ -331,8 +333,8 @@ class ControlLDM(LatentDiffusion):
                 self.shape_list = [[[1, 320, 32, 48], 3], [[1, 320, 16, 24], 1], [[1, 640, 16, 24], 2], [[1, 640, 8, 12], 1], [[1, 1280, 8, 12], 2], [[1, 1280, 4, 6], 4]]
 
                 self.mid_tensors = [torch.zeros(box[0], device=device, dtype=torch.float32) for box in self.shape_list for _ in range(box[1]) ]
-                print(len(self.mid_tensors))
-                input()
+                # print(len(self.mid_tensors))
+                # input()
                 # input()
                 # for box in self.mid_tensors:
                 #     print(box.size())
@@ -386,8 +388,6 @@ class ControlLDM(LatentDiffusion):
                     
                     memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
             
-            print(len(self.mid_tensors))
-            input()
             # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
             # control = [c * scale for c, scale in zip(control, self.control_scales)]
             eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=self.mid_tensors, only_mid_control=self.only_mid_control)
