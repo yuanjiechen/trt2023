@@ -323,7 +323,7 @@ class ControlLDM(LatentDiffusion):
         self.control_scales = [1.0] * 13
 
         if not Path("controlnet_fp16.engine").exists(): control_net_use_trt = False
-        else: control_net_use_trt = False ###################
+        control_net_use_trt = False ###################
         if control_net_use_trt:
 
             device = torch.device("cuda")
