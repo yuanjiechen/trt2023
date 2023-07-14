@@ -18,7 +18,7 @@ from ldm.models.diffusion.ddpm import LatentDiffusion
 from ldm.util import log_txt_as_img, exists, instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
-control_net_use_trt = True
+#control_net_use_trt = True
 from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
 import tensorrt as trt
 from cuda import cuda, cudart

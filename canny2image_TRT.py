@@ -41,12 +41,12 @@ class hackathon():
 
             if seed == -1:
                 seed = random.randint(0, 65535)
-            # seed_everything(seed)
-            os.environ["PL_GLOBAL_SEED"] = str(seed)
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
+            seed_everything(seed)
+            # os.environ["PL_GLOBAL_SEED"] = str(seed)
+            # random.seed(seed)
+            # np.random.seed(seed)
+            # torch.manual_seed(seed)
+            # torch.cuda.manual_seed_all(seed)
 
             os.environ["PL_SEED_WORKERS"] = f"{int(False)}"
 
