@@ -326,7 +326,7 @@ class ControlLDM(LatentDiffusion):
             device = torch.device("cuda")
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
-            with open("controlnet.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+            with open("controlnet_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
@@ -371,7 +371,7 @@ class ControlLDM(LatentDiffusion):
         if cond['c_concat'] is None:
             eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=None, only_mid_control=self.only_mid_control)
         else:
-            # torch.onnx.export(self.control_model.eval(), (x_noisy, torch.cat(cond['c_concat'], 1), t, cond_txt), "./model.onnx", opset_version=16)
+            # torch.onnx.export(self.control_model.eval(), (x_noisy, torch.cat(cond['c_concat'], 1), t, cond_txt), "./controlnet.onnx", opset_version=17, do_constant_folding=True)
             # raise
             if control_net_use_trt:
                 outs = []
@@ -385,7 +385,6 @@ class ControlLDM(LatentDiffusion):
                     stream_handle=self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
                 for out, mid_out in zip(self.outputs, self.mid_tensors):
-                    
                     memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
             
             # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
