@@ -23,6 +23,7 @@ from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_devic
 import tensorrt as trt
 from cuda import cuda, cudart
 import numpy as np
+from pathlib import Path
 
 class ControlledUnetModel(UNetModel):
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
@@ -321,6 +322,7 @@ class ControlLDM(LatentDiffusion):
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
 
+        if not Path("controlnet_fp16.engine").exists(): control_net_use_trt = False
         if control_net_use_trt:
 
             device = torch.device("cuda")
