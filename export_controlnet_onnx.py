@@ -14,7 +14,7 @@ if __name__ == '__main__':
     for inp in inputs:
         cuda_inputs.append( inp.cuda())
     try:
-        torch.onnx.export(hk.model.control_model.eval(), cuda_inputs, "./controlnet.onnx", opset_version=17, do_constant_folding=True)
+        torch.onnx.export(hk.model.control_model.eval(), tuple(cuda_inputs), "./controlnet.onnx", opset_version=17, do_constant_folding=True)
     except BaseException as e:
         print(e)
         raise
