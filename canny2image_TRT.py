@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import random
 
-# from pytorch_lightning import seed_everything
+from pytorch_lightning import seed_everything
 from annotator.util import resize_image, HWC3
 from annotator.canny import CannyDetector
 from cldm.model import create_model, load_state_dict
@@ -22,7 +22,7 @@ class hackathon():
     def initialize(self):
         self.apply_canny = CannyDetector()
         self.model = create_model('./models/cldm_v15.yaml').cpu()
-        self.model.load_state_dict(load_state_dict('/home/player/ControlNet/models/control_sd15_canny.pth', location='cuda'))
+        self.model.load_state_dict(load_state_dict('./models/control_sd15_canny.pth', location='cuda'))
         self.model = self.model.cuda()
         self.ddim_sampler = DDIMSampler(self.model)
 
@@ -42,11 +42,6 @@ class hackathon():
             if seed == -1:
                 seed = random.randint(0, 65535)
             seed_everything(seed)
-            # os.environ["PL_GLOBAL_SEED"] = str(seed)
-            # random.seed(seed)
-            # np.random.seed(seed)
-            # torch.manual_seed(seed)
-            # torch.cuda.manual_seed_all(seed)
 
             os.environ["PL_SEED_WORKERS"] = f"{int(False)}"
 
@@ -62,7 +57,7 @@ class hackathon():
                 self.model.low_vram_shift(is_diffusing=True)
 
             self.model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)  # Magic number. IDK why. Perhaps because 0.825**12<0.01 but 0.826**12>0.01
-            print(type(self.model))
+            # print(type(self.model))
             samples, intermediates = self.ddim_sampler.sample(ddim_steps, num_samples,
                                                         shape, cond, verbose=False, eta=eta,
                                                         unconditional_guidance_scale=scale,

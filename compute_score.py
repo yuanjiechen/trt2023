@@ -20,7 +20,7 @@ scores = []
 latencys = []
 hk = hackathon()
 hk.initialize()
-for i in range(1):
+for i in range(20):
     path = "../pictures_croped/bird_"+ str(i) + ".jpg"#/home/player
     img = cv2.imread(path)
     start = datetime.datetime.now().timestamp()
@@ -43,7 +43,7 @@ for i in range(1):
     new_path = "./bird_"+ str(i) + ".jpg"
     cv2.imwrite(new_path, new_img[0])
     # generate the base_img by running the pytorch fp32 pipeline (origin code in canny2image_TRT.py)
-    # base_path = "base_img.jpg"
-    #score = PD(base_path, new_path)
-    #print("score is: ", score)
+    base_path = "base_img.jpg"
+    score = PD(base_path, new_path)
+    print("score is: ", score)
 

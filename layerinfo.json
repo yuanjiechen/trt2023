@@ -86,7 +86,7 @@
   "Metadata": "[ONNX Layer: /Mul]"
 },{
   "Name": "/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "onnx::Cast_0",
@@ -99,7 +99,7 @@
     "Name": "/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,4,32,48],
-    "Format/Datatype": "Row major linear FP32"
+    "Format/Datatype": "Channel major FP16 format where channel % 4 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -165,7 +165,7 @@
   "Literals": [],
   "NbOperations": 1,
   "Operations": ["auto const var0 = pwgen::iCos(arg0);"],
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x000000000000001c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /Cos]"
 },{
@@ -187,7 +187,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "REFORMAT",
-  "TacticValue": "0x00000000000003ea",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
@@ -228,8 +228,8 @@
   "Activation": "NONE",
   "HasBias": 1,
   "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x16x32_stage1_warpsize4x1x1_g1_tensor16x8x16_aligna8_alignc8",
-  "TacticValue": "0x96786911782c23e1",
+  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x16x64_stage1_warpsize4x1x1_g1_tensor16x8x16_aligna8_alignc8",
+  "TacticValue": "0x112767cf498572ea",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_hint_block/input_hint_block.0/Conv]"
 },{
@@ -353,8 +353,8 @@
   "PointWiseExpressionOperations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
   "HasBias": 1,
   "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x16x64_stage1_warpsize4x1x1_g1_tensor16x8x16_alignc8",
-  "TacticValue": "0x29d52f76d7883502",
+  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x16x64_stage1_warpsize4x1x1_g1_tensor16x8x16_alignc4",
+  "TacticValue": "0xa5a46bfbd719d757",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_hint_block/input_hint_block.2/Conv]\u001e[ONNX Layer: /input_hint_block/input_hint_block.3/Sigmoid]\u001e[ONNX Layer: /input_hint_block/input_hint_block.3/Mul]"
 },{
@@ -618,8 +618,8 @@
   "PointWiseExpressionOperations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
   "HasBias": 1,
   "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x64x32_stage5_warpsize2x2x1_g1_tensor16x8x16_t1r3s3_linkable",
-  "TacticValue": "0x4db79797bad0af06",
+  "TacticName": "sm80_xmma_fprop_implicit_gemm_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize64x128x32_stage5_warpsize2x2x1_g1_tensor16x8x16_t1r3s3_linkable",
+  "TacticValue": "0x1171249e97d91786",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_hint_block/input_hint_block.12/Conv]\u001e[ONNX Layer: /input_hint_block/input_hint_block.13/Sigmoid]\u001e[ONNX Layer: /input_hint_block/input_hint_block.13/Mul]"
 },{
@@ -666,23 +666,41 @@
   "Metadata": "[ONNX Layer: /input_hint_block/input_hint_block.14/Conv]"
 },{
   "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
-  "LayerType": "Reformat",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,4,32,48],
-    "Format/Datatype": "Row major linear FP32"
+    "Format/Datatype": "Channel major FP16 format where channel % 4 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
     "Location": "Device",
     "Dimensions": [1,4,32,48],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 1 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/input_hint_block/input_hint_block.14/Conv_output_0",
+    "Location": "Device",
+    "Dimensions": [1,320,32,48],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 1 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
+    "Location": "Device",
+    "Dimensions": [1,320,32,48],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -694,20 +712,20 @@
     "Name": "Reformatted Input Tensor 0 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
     "Location": "Device",
     "Dimensions": [1,4,32,48],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   },
   {
-    "Name": "/input_hint_block/input_hint_block.14/Conv_output_0",
+    "Name": "Reformatted Input Tensor 1 to /input_blocks.0/input_blocks.0.0/Conv + /Add",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "Convolution",
   "Kernel": [3,3],
@@ -730,8 +748,8 @@
   "Activation": "NONE",
   "HasBias": 1,
   "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x32x64_stage1_warpsize4x1x1_g1_tensor16x8x16_alignc8",
-  "TacticValue": "0x1bf48a356bd0c083",
+  "TacticName": "sm80_xmma_fprop_implicit_gemm_indexed_wo_smem_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize128x16x64_stage1_warpsize4x1x1_g1_tensor16x8x16_aligna4_alignc4",
+  "TacticValue": "0x98e92db98836b738",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.0/input_blocks.0.0/Conv]\u001e[ONNX Layer: /Add]"
 },{
@@ -742,7 +760,7 @@
     "Name": "/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
@@ -1148,7 +1166,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x000000000000001c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /time_embed/time_embed.1/Sigmoid]\u001e[ONNX Layer: /time_embed/time_embed.1/Mul]"
 },{
@@ -1172,8 +1190,8 @@
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /time_embed/time_embed.2/Gemm]"
 },{
-  "Name": "/time_embed/time_embed.2/Gemm",
-  "LayerType": "CaskGemmConvolution",
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /time_embed/time_embed.2/Gemm",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "reshape_before_/time_embed/time_embed.2/Gemm_out_tensor",
@@ -1183,10 +1201,30 @@
   }],
   "Outputs": [
   {
+    "Name": "Reformatted Input Tensor 0 to /time_embed/time_embed.2/Gemm",
+    "Location": "Device",
+    "Dimensions": [1,1280,1,1],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
+},{
+  "Name": "/time_embed/time_embed.2/Gemm",
+  "LayerType": "CaskGemmConvolution",
+  "Inputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /time_embed/time_embed.2/Gemm",
+    "Location": "Device",
+    "Dimensions": [1,1280,1,1],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "Outputs": [
+  {
     "Name": "/time_embed/time_embed.2/Gemm_out_tensor",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "ParameterType": "Convolution",
   "Kernel": [1,1],
@@ -1207,16 +1245,36 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "sm50_xmma_cublas_gemvx_f16f16_f32_f32_tn_n_int32_unit_n_launch_param16x32x32_strided_unit_stride",
-  "TacticValue": "0x000000000002058e",
+  "TacticName": "sm80_xmma_gemm_f16f16_f16f16_f16_tn_n_tilesize32x32x64_stage6_warpsize2x2x1_tensor16x8x16",
+  "TacticValue": "0x000000000002015c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /time_embed/time_embed.2/Gemm]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to reshape_after_/time_embed/time_embed.2/Gemm",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/time_embed/time_embed.2/Gemm_out_tensor",
+    "Location": "Device",
+    "Dimensions": [1,1280,1,1],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to reshape_after_/time_embed/time_embed.2/Gemm",
+    "Location": "Device",
+    "Dimensions": [1,1280,1,1],
+    "Format/Datatype": "Row major linear FP16 format"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "reshape_after_/time_embed/time_embed.2/Gemm",
   "LayerType": "NoOp",
   "Inputs": [
   {
-    "Name": "/time_embed/time_embed.2/Gemm_out_tensor",
+    "Name": "Reformatted Input Tensor 0 to reshape_after_/time_embed/time_embed.2/Gemm",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
     "Format/Datatype": "Row major linear FP16 format"
@@ -1260,7 +1318,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x000000000000001c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.1/input_blocks.1.0/emb_layers/emb_layers.0/Sigmoid]\u001e[ONNX Layer: /input_blocks.1/input_blocks.1.0/emb_layers/emb_layers.0/Mul]"
 },{
@@ -1875,7 +1933,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "REFORMAT",
-  "TacticValue": "0x00000000000003ea",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
@@ -2274,7 +2332,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x00000000000003e8",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.2/input_blocks.2.0/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -2767,7 +2825,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "REFORMAT",
-  "TacticValue": "0x00000000000003ea",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
@@ -2811,31 +2869,15 @@
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.2/input_blocks.2.1/proj_in/Conv]"
 },{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-  "LayerType": "Reformat",
+  "Name": "{ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
+  "LayerType": "Myelin",
   "Inputs": [
   {
     "Name": "/input_blocks.2/input_blocks.2.1/proj_in/Conv_output_0",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-    "Location": "Device",
-    "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 1 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-  "LayerType": "Reformat",
-  "Inputs": [
+  },
   {
     "Name": "onnx::MatMul_3",
     "Location": "Device",
@@ -2844,62 +2886,12 @@
   }],
   "Outputs": [
   {
-    "Name": "Reformatted Input Tensor 1 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-    "Location": "Device",
-    "Dimensions": [1,77,768],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
-  "TacticValue": "0x00000000000003e8",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "{ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-  "LayerType": "Myelin",
-  "Inputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-    "Location": "Device",
-    "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Row major linear FP16 format"
-  },
-  {
-    "Name": "Reformatted Input Tensor 1 to {ForeignNode[input_blocks.2.1.transformer_blocks.0.norm1.weight + (Unnamed Layer* 513) [Shuffle].../input_blocks.2/input_blocks.2.1/Reshape_2 + /input_blocks.2/input_blocks.2.1/Transpose_1 + /input_blocks.2/input_blocks.2.1/Reshape_3]}",
-    "Location": "Device",
-    "Dimensions": [1,77,768],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
     "Name": "/input_blocks.2/input_blocks.2.1/Reshape_3_output_0",
-    "Location": "Device",
-    "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.2/input_blocks.2.1/proj_out/Conv + /input_blocks.2/input_blocks.2.1/Add",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.2/input_blocks.2.1/Reshape_3_output_0",
-    "Location": "Device",
-    "Dimensions": [1,320,32,48],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.2/input_blocks.2.1/proj_out/Conv + /input_blocks.2/input_blocks.2.1/Add",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
-  "TacticValue": "0x00000000000003ea",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
@@ -2907,7 +2899,7 @@
   "LayerType": "CaskGemmConvolution",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.2/input_blocks.2.1/proj_out/Conv + /input_blocks.2/input_blocks.2.1/Add",
+    "Name": "/input_blocks.2/input_blocks.2.1/Reshape_3_output_0",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -3190,7 +3182,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x000000000000001c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.4/input_blocks.4.0/in_layers/in_layers.1/Mul]"
 },{
@@ -3492,7 +3484,7 @@
     "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -3505,14 +3497,14 @@
     "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Sigmoid), /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -3525,14 +3517,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Sigmoid), /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -3546,35 +3538,15 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001e",
-  "StreamId": 0,
-  "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul]"
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.4/input_blocks.4.0/out_layers/out_layers.3/Conv",
-  "LayerType": "NoOp",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul_output_0",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.4/input_blocks.4.0/out_layers/out_layers.3/Conv",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
-  "Metadata": ""
+  "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul]"
 },{
   "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.3/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.4/input_blocks.4.0/out_layers/out_layers.3/Conv",
+    "Name": "/input_blocks.4/input_blocks.4.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -3653,8 +3625,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.0/skip_connection/Conv]\u001e[ONNX Layer: /input_blocks.4/input_blocks.4.0/Add_1]"
 },{
@@ -3826,8 +3798,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.1/proj_in/Conv]"
 },{
@@ -3898,8 +3870,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.4/input_blocks.4.1/proj_out/Conv]\u001e[ONNX Layer: /input_blocks.4/input_blocks.4.1/Add]"
 },{
@@ -4048,7 +4020,7 @@
     "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -4061,14 +4033,14 @@
     "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Sigmoid), /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -4081,14 +4053,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Sigmoid), /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -4102,35 +4074,15 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001e",
-  "StreamId": 0,
-  "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul]"
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.5/input_blocks.5.0/in_layers/in_layers.2/Conv",
-  "LayerType": "NoOp",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul_output_0",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.5/input_blocks.5.0/in_layers/in_layers.2/Conv",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
-  "Metadata": ""
+  "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul]"
 },{
   "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.2/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.5/input_blocks.5.0/in_layers/in_layers.2/Conv",
+    "Name": "/input_blocks.5/input_blocks.5.0/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -4186,7 +4138,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x00000000000003e8",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.0/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -4424,7 +4376,7 @@
     "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -4437,14 +4389,14 @@
     "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Sigmoid), /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -4457,14 +4409,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Sigmoid), /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -4478,35 +4430,15 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001e",
-  "StreamId": 0,
-  "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul]"
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.5/input_blocks.5.0/out_layers/out_layers.3/Conv + /input_blocks.5/input_blocks.5.0/Add_1",
-  "LayerType": "NoOp",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul_output_0",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.5/input_blocks.5.0/out_layers/out_layers.3/Conv + /input_blocks.5/input_blocks.5.0/Add_1",
-    "Location": "Device",
-    "Dimensions": [1,640,16,24],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
-  "Metadata": ""
+  "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul]"
 },{
   "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.3/Conv + /input_blocks.5/input_blocks.5.0/Add_1",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.5/input_blocks.5.0/out_layers/out_layers.3/Conv + /input_blocks.5/input_blocks.5.0/Add_1",
+    "Name": "/input_blocks.5/input_blocks.5.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,640,16,24],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -4718,8 +4650,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.1/proj_in/Conv]"
 },{
@@ -4790,8 +4722,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.5/input_blocks.5.1/proj_out/Conv]\u001e[ONNX Layer: /input_blocks.5/input_blocks.5.1/Add]"
 },{
@@ -5374,7 +5306,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001c",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.7/input_blocks.7.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.7/input_blocks.7.0/out_layers/out_layers.1/Mul]"
 },{
@@ -5890,7 +5822,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001c",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.8/input_blocks.8.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.8/input_blocks.8.0/in_layers/in_layers.1/Mul]"
 },{
@@ -5954,7 +5886,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x00000000000003e8",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.8/input_blocks.8.0/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -6226,7 +6158,7 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000001c",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.8/input_blocks.8.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.8/input_blocks.8.0/out_layers/out_layers.1/Mul]"
 },{
@@ -6273,8 +6205,8 @@
   "Activation": "NONE",
   "HasBias": 1,
   "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize64x64x64_stage4_warpsize2x1x2_g1_tensor16x8x16_aACCESS",
-  "TacticValue": "0x841c601dec2a75bc",
+  "TacticName": "sm80_xmma_fprop_implicit_gemm_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize64x64x64_stage4_warpsize2x2x1_g1_tensor16x8x16",
+  "TacticValue": "0xf35e0311fa1cc516",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.8/input_blocks.8.0/out_layers/out_layers.3/Conv]\u001e[ONNX Layer: /input_blocks.8/input_blocks.8.0/Add_1]"
 },{
@@ -6697,7 +6629,7 @@
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Mul]\u001e[ONNX Layer: /input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Add]"
 },{
   "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Add_output_0",
@@ -6710,30 +6642,8 @@
     "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul)",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Cast_1_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul)",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -6742,17 +6652,17 @@
   "LayerType": "PointWiseV2",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul)",
+    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -6766,15 +6676,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000001e",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -6826,11 +6756,11 @@
     "Name": "reshape_after_/input_blocks.10/input_blocks.10.0/emb_layers/emb_layers.1/Gemm_copy_input",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x00000000000003e8",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -6841,14 +6771,14 @@
     "Name": "reshape_after_/input_blocks.10/input_blocks.10.0/emb_layers/emb_layers.1/Gemm_copy_input",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/emb_layers/emb_layers.1/Gemm_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -6861,14 +6791,14 @@
     "Name": "/input_blocks.10/input_blocks.10.0/emb_layers/emb_layers.1/Gemm_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -6881,35 +6811,37 @@
     "Name": "/input_blocks.10/input_blocks.10.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/Unsqueeze_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/Unsqueeze]\u001e[ONNX Layer: /input_blocks.10/input_blocks.10.0/Unsqueeze_1]"
 },{
-  "Name": "Reformatting CopyNode for Input Tensor 1 to /input_blocks.10/input_blocks.10.0/Add",
-  "LayerType": "NoOp",
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.10/input_blocks.10.0/Add",
+  "LayerType": "Reformat",
   "Inputs": [
   {
-    "Name": "/input_blocks.10/input_blocks.10.0/Unsqueeze_1_output_0",
+    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv_output_0",
     "Location": "Device",
-    "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
-    "Name": "Reformatted Input Tensor 1 to /input_blocks.10/input_blocks.10.0/Add",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/Add",
     "Location": "Device",
-    "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Row major linear FP32"
   }],
+  "ParameterType": "Reformat",
+  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -6918,23 +6850,23 @@
   "LayerType": "ElementWise",
   "Inputs": [
   {
-    "Name": "/input_blocks.10/input_blocks.10.0/in_layers/in_layers.2/Conv_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/Add",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   },
   {
-    "Name": "Reformatted Input Tensor 1 to /input_blocks.10/input_blocks.10.0/Add",
+    "Name": "/input_blocks.10/input_blocks.10.0/Unsqueeze_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "ElementWise",
   "ElementWiseOperation": "SUM",
@@ -6950,37 +6882,15 @@
     "Name": "/input_blocks.10/input_blocks.10.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 2971) [Shuffle]",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 2971) [Shuffle]",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -6989,17 +6899,17 @@
   "LayerType": "NoOp",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 2971) [Shuffle]",
+    "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 2971) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7012,14 +6922,14 @@
     "Name": "(Unnamed Layer* 2971) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 2972) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "PluginType": "InstanceNormalization_TRT",
   "PluginVersion": "1",
@@ -7034,14 +6944,14 @@
     "Name": "(Unnamed Layer* 2972) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7054,20 +6964,20 @@
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Scale",
   "Mode": "CHANNEL",
-  "Shift": {"Type": "Half", "Count": 1280},
-  "Scale": {"Type": "Half", "Count": 1280},
-  "Power": {"Type": "Half", "Count": 0},
+  "Shift": {"Type": "Float", "Count": 1280},
+  "Scale": {"Type": "Float", "Count": 1280},
+  "Power": {"Type": "Float", "Count": 0},
   "Activation": "NONE",
   "ChannelAxis": 1,
   "TacticValue": "0x0000000000000000",
@@ -7075,43 +6985,41 @@
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Mul]\u001e[ONNX Layer: /input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Add]"
 },{
   "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
   "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul)",
-  "LayerType": "Reformat",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -7123,14 +7031,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Sigmoid), /input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -7144,15 +7052,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000000c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.3/Conv + /input_blocks.10/input_blocks.10.0/Add_1",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.3/Conv + /input_blocks.10/input_blocks.10.0/Add_1",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.3/Conv + /input_blocks.10/input_blocks.10.0/Add_1",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/input_blocks.10/input_blocks.10.0/out_layers/out_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.10/input_blocks.10.0/out_layers/out_layers.3/Conv + /input_blocks.10/input_blocks.10.0/Add_1",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -7328,7 +7256,7 @@
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Mul]\u001e[ONNX Layer: /input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Add]"
 },{
   "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Add_output_0",
@@ -7341,30 +7269,8 @@
     "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul)",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Cast_1_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul)",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -7373,17 +7279,17 @@
   "LayerType": "PointWiseV2",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul)",
+    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -7397,15 +7303,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000001e",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -7457,11 +7383,11 @@
     "Name": "reshape_after_/input_blocks.11/input_blocks.11.0/emb_layers/emb_layers.1/Gemm_copy_input",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x00000000000003e8",
+  "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -7472,14 +7398,14 @@
     "Name": "reshape_after_/input_blocks.11/input_blocks.11.0/emb_layers/emb_layers.1/Gemm_copy_input",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/emb_layers/emb_layers.1/Gemm_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7492,14 +7418,14 @@
     "Name": "/input_blocks.11/input_blocks.11.0/emb_layers/emb_layers.1/Gemm_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7512,35 +7438,37 @@
     "Name": "/input_blocks.11/input_blocks.11.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/Unsqueeze_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/Unsqueeze]\u001e[ONNX Layer: /input_blocks.11/input_blocks.11.0/Unsqueeze_1]"
 },{
-  "Name": "Reformatting CopyNode for Input Tensor 1 to /input_blocks.11/input_blocks.11.0/Add",
-  "LayerType": "NoOp",
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.11/input_blocks.11.0/Add",
+  "LayerType": "Reformat",
   "Inputs": [
   {
-    "Name": "/input_blocks.11/input_blocks.11.0/Unsqueeze_1_output_0",
+    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv_output_0",
     "Location": "Device",
-    "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
-    "Name": "Reformatted Input Tensor 1 to /input_blocks.11/input_blocks.11.0/Add",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/Add",
     "Location": "Device",
-    "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Row major linear FP32"
   }],
+  "ParameterType": "Reformat",
+  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -7549,23 +7477,23 @@
   "LayerType": "ElementWise",
   "Inputs": [
   {
-    "Name": "/input_blocks.11/input_blocks.11.0/in_layers/in_layers.2/Conv_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/Add",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   },
   {
-    "Name": "Reformatted Input Tensor 1 to /input_blocks.11/input_blocks.11.0/Add",
+    "Name": "/input_blocks.11/input_blocks.11.0/Unsqueeze_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,1,1],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "ElementWise",
   "ElementWiseOperation": "SUM",
@@ -7581,37 +7509,15 @@
     "Name": "/input_blocks.11/input_blocks.11.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Row major linear FP32"
   }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 3016) [Shuffle]",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 3016) [Shuffle]",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -7620,17 +7526,17 @@
   "LayerType": "NoOp",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Reshape + (Unnamed Layer* 3016) [Shuffle]",
+    "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 3016) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7643,14 +7549,14 @@
     "Name": "(Unnamed Layer* 3016) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 3017) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "PluginType": "InstanceNormalization_TRT",
   "PluginVersion": "1",
@@ -7665,14 +7571,14 @@
     "Name": "(Unnamed Layer* 3017) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -7685,20 +7591,20 @@
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Scale",
   "Mode": "CHANNEL",
-  "Shift": {"Type": "Half", "Count": 1280},
-  "Scale": {"Type": "Half", "Count": 1280},
-  "Power": {"Type": "Half", "Count": 0},
+  "Shift": {"Type": "Float", "Count": 1280},
+  "Scale": {"Type": "Float", "Count": 1280},
+  "Power": {"Type": "Float", "Count": 0},
   "Activation": "NONE",
   "ChannelAxis": 1,
   "TacticValue": "0x0000000000000000",
@@ -7706,43 +7612,41 @@
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Mul]\u001e[ONNX Layer: /input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Add]"
 },{
   "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
   "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul)",
-  "LayerType": "Reformat",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -7754,14 +7658,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Sigmoid), /input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -7775,15 +7679,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000000c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.3/Conv + /input_blocks.11/input_blocks.11.0/Add_1",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.3/Conv + /input_blocks.11/input_blocks.11.0/Add_1",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.3/Conv + /input_blocks.11/input_blocks.11.0/Add_1",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/input_blocks.11/input_blocks.11.0/out_layers/out_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /input_blocks.11/input_blocks.11.0/out_layers/out_layers.3/Conv + /input_blocks.11/input_blocks.11.0/Add_1",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -7959,7 +7883,7 @@
   "Metadata": "[ONNX Layer: /middle_block/middle_block.0/in_layers/in_layers.0/Mul]\u001e[ONNX Layer: /middle_block/middle_block.0/in_layers/in_layers.0/Add]"
 },{
   "Name": "/middle_block/middle_block.0/in_layers/in_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/middle_block/middle_block.0/in_layers/in_layers.0/Add_output_0",
@@ -7972,30 +7896,8 @@
     "Name": "/middle_block/middle_block.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/middle_block/middle_block.0/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.0/in_layers/in_layers.1/Mul)",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/middle_block/middle_block.0/in_layers/in_layers.0/Cast_1_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.0/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.0/in_layers/in_layers.1/Mul)",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -8004,17 +7906,17 @@
   "LayerType": "PointWiseV2",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.0/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.0/in_layers/in_layers.1/Mul)",
+    "Name": "/middle_block/middle_block.0/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.0/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -8028,15 +7930,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000001e",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.0/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /middle_block/middle_block.0/in_layers/in_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /middle_block/middle_block.0/in_layers/in_layers.2/Conv",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/middle_block/middle_block.0/in_layers/in_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 16 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.0/in_layers/in_layers.2/Conv",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/middle_block/middle_block.0/in_layers/in_layers.2/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/middle_block/middle_block.0/in_layers/in_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.0/in_layers/in_layers.2/Conv",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -8330,7 +8252,7 @@
     "Name": "/middle_block/middle_block.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -8343,14 +8265,14 @@
     "Name": "/middle_block/middle_block.0/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.0/out_layers/out_layers.1/Sigmoid), /middle_block/middle_block.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -8363,14 +8285,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.0/out_layers/out_layers.1/Sigmoid), /middle_block/middle_block.0/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.0/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -8384,15 +8306,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000000c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.0/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /middle_block/middle_block.0/out_layers/out_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /middle_block/middle_block.0/out_layers/out_layers.3/Conv + /middle_block/middle_block.0/Add_1",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/middle_block/middle_block.0/out_layers/out_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.0/out_layers/out_layers.3/Conv + /middle_block/middle_block.0/Add_1",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/middle_block/middle_block.0/out_layers/out_layers.3/Conv + /middle_block/middle_block.0/Add_1",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/middle_block/middle_block.0/out_layers/out_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.0/out_layers/out_layers.3/Conv + /middle_block/middle_block.0/Add_1",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -8501,7 +8443,7 @@
   "Metadata": "[ONNX Layer: /middle_block/middle_block.1/norm/InstanceNormalization]"
 },{
   "Name": "(Unnamed Layer* 3086) [Shuffle] + /middle_block/middle_block.1/norm/Reshape_1",
-  "LayerType": "NoOp",
+  "LayerType": "Shuffle",
   "Inputs": [
   {
     "Name": "(Unnamed Layer* 3085) [PluginV2DynamicExt]_output",
@@ -8514,27 +8456,52 @@
     "Name": "/middle_block/middle_block.1/norm/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
+  "ParameterType": "Shuffle",
+  "FirstTranspose": [0,1,2,3],
+  "Reshape": [1,1280,4,6],
+  "SecondTranspose": [0,1,2,3],
+  "ZeroIsPlaceholder": 1,
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.1/norm/Reshape_1]"
 },{
-  "Name": "onnx::Mul_4398 + (Unnamed Layer* 3090) [Shuffle] + /middle_block/middle_block.1/norm/Mul + onnx::Add_4399 + (Unnamed Layer* 3093) [Shuffle] + /middle_block/middle_block.1/norm/Add",
-  "LayerType": "Scale",
+  "Name": "Reformatting CopyNode for Input Tensor 0 to onnx::Mul_4398 + (Unnamed Layer* 3090) [Shuffle] + /middle_block/middle_block.1/norm/Mul + onnx::Add_4399 + (Unnamed Layer* 3093) [Shuffle] + /middle_block/middle_block.1/norm/Add",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "/middle_block/middle_block.1/norm/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to onnx::Mul_4398 + (Unnamed Layer* 3090) [Shuffle] + /middle_block/middle_block.1/norm/Mul + onnx::Add_4399 + (Unnamed Layer* 3093) [Shuffle] + /middle_block/middle_block.1/norm/Add",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
+},{
+  "Name": "onnx::Mul_4398 + (Unnamed Layer* 3090) [Shuffle] + /middle_block/middle_block.1/norm/Mul + onnx::Add_4399 + (Unnamed Layer* 3093) [Shuffle] + /middle_block/middle_block.1/norm/Add",
+  "LayerType": "Scale",
+  "Inputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to onnx::Mul_4398 + (Unnamed Layer* 3090) [Shuffle] + /middle_block/middle_block.1/norm/Mul + onnx::Add_4399 + (Unnamed Layer* 3093) [Shuffle] + /middle_block/middle_block.1/norm/Add",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.1/norm/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "ParameterType": "Scale",
   "Mode": "CHANNEL",
@@ -8547,33 +8514,11 @@
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.1/norm/Mul]\u001e[ONNX Layer: /middle_block/middle_block.1/norm/Add]"
 },{
-  "Name": "Reformatting CopyNode for Input Tensor 0 to /middle_block/middle_block.1/proj_in/Conv",
-  "LayerType": "Reformat",
-  "Inputs": [
-  {
-    "Name": "/middle_block/middle_block.1/norm/Add_output_0",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
-  }],
-  "Outputs": [
-  {
-    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.1/proj_in/Conv",
-    "Location": "Device",
-    "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
-  }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
-  "TacticValue": "0x0000000000000000",
-  "StreamId": 0,
-  "Metadata": ""
-},{
   "Name": "/middle_block/middle_block.1/proj_in/Conv",
   "LayerType": "CaskGemmConvolution",
   "Inputs": [
   {
-    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.1/proj_in/Conv",
+    "Name": "/middle_block/middle_block.1/norm/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -8635,11 +8580,31 @@
   "StreamId": 0,
   "Metadata": ""
 },{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /zero_convs.0/zero_convs.0.0/Conv",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/Add_output_0",
+    "Location": "Device",
+    "Dimensions": [1,320,32,48],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /zero_convs.0/zero_convs.0.0/Conv",
+    "Location": "Device",
+    "Dimensions": [1,320,32,48],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
+},{
   "Name": "/zero_convs.0/zero_convs.0.0/Conv",
   "LayerType": "CaskGemmConvolution",
   "Inputs": [
   {
-    "Name": "/Add_output_0",
+    "Name": "Reformatted Input Tensor 0 to /zero_convs.0/zero_convs.0.0/Conv",
     "Location": "Device",
     "Dimensions": [1,320,32,48],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -8760,7 +8725,7 @@
   "Metadata": ""
 },{
   "Name": "/zero_convs.3/zero_convs.3.0/Conv",
-  "LayerType": "CaskConvolution",
+  "LayerType": "CaskGemmConvolution",
   "Inputs": [
   {
     "Name": "/input_blocks.3/input_blocks.3.0/op/Conv_output_0",
@@ -8794,10 +8759,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "HasBias": 1,
-  "HasReLU": 0,
-  "TacticName": "sm80_xmma_fprop_implicit_gemm_f16f16_f16f16_f16_nhwckrsc_nhwc_tilesize64x32x64_stage5_warpsize2x2x1_g1_tensor16x8x16_simple_t1r1s1",
-  "TacticValue": "0xe69f3e9fcc7b2069",
+  "TacticName": "sm80_xmma_gemm_f16f16_f16f16_f16_nn_n_tilesize64x32x64_stage5_warpsize2x2x1_tensor16x8x16",
+  "TacticValue": "0x000000000002063b",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /zero_convs.3/zero_convs.3.0/Conv]"
 },{
@@ -8920,8 +8883,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /zero_convs.4/zero_convs.4.0/Conv]"
 },{
@@ -9044,8 +9007,8 @@
   "BiasAsActInputIdx": -1,
   "ResAsActInputIdx": -1,
   "Activation": "NONE",
-  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_tn_v1",
-  "TacticValue": "0x00000000000208cc",
+  "TacticName": "ampere_h16816gemm_64x64_ldg8_relu_stages_64x5_nn_v1",
+  "TacticValue": "0x0000000000020924",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /zero_convs.5/zero_convs.5.0/Conv]"
 },{
@@ -9461,7 +9424,7 @@
     "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/in_layers/in_layers.0/Reshape + (Unnamed Layer* 3540) [Shuffle]",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Reformat",
   "Origin": "REFORMAT",
@@ -9476,14 +9439,14 @@
     "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/in_layers/in_layers.0/Reshape + (Unnamed Layer* 3540) [Shuffle]",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 3540) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -9496,14 +9459,14 @@
     "Name": "(Unnamed Layer* 3540) [Shuffle]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "(Unnamed Layer* 3541) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "PluginType": "InstanceNormalization_TRT",
   "PluginVersion": "1",
@@ -9518,14 +9481,14 @@
     "Name": "(Unnamed Layer* 3541) [PluginV2DynamicExt]_output",
     "Location": "Device",
     "Dimensions": [1,32,960,1],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -9538,20 +9501,20 @@
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Reshape_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "ParameterType": "Scale",
   "Mode": "CHANNEL",
-  "Shift": {"Type": "Half", "Count": 1280},
-  "Scale": {"Type": "Half", "Count": 1280},
-  "Power": {"Type": "Half", "Count": 0},
+  "Shift": {"Type": "Float", "Count": 1280},
+  "Scale": {"Type": "Float", "Count": 1280},
+  "Power": {"Type": "Float", "Count": 0},
   "Activation": "NONE",
   "ChannelAxis": 1,
   "TacticValue": "0x0000000000000000",
@@ -9559,43 +9522,41 @@
   "Metadata": "[ONNX Layer: /middle_block/middle_block.2/in_layers/in_layers.0/Mul]\u001e[ONNX Layer: /middle_block/middle_block.2/in_layers/in_layers.0/Add]"
 },{
   "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Cast_1",
-  "LayerType": "NoOp",
+  "LayerType": "MyelinReformat",
   "Inputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Add_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Row major linear FP32"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
 },{
   "Name": "Reformatting CopyNode for Input Tensor 0 to PWN(PWN(/middle_block/middle_block.2/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.2/in_layers/in_layers.1/Mul)",
-  "LayerType": "Reformat",
+  "LayerType": "NoOp",
   "Inputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Row major linear FP16 format"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.2/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.2/in_layers/in_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
-  "ParameterType": "Reformat",
-  "Origin": "REFORMAT",
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
   "Metadata": ""
@@ -9607,14 +9568,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.2/in_layers/in_layers.1/Sigmoid), /middle_block/middle_block.2/in_layers/in_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.2/in_layers/in_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -9628,15 +9589,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000000c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.2/in_layers/in_layers.1/Sigmoid]\u001e[ONNX Layer: /middle_block/middle_block.2/in_layers/in_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /middle_block/middle_block.2/in_layers/in_layers.2/Conv",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/middle_block/middle_block.2/in_layers/in_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/in_layers/in_layers.2/Conv",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/middle_block/middle_block.2/in_layers/in_layers.2/Conv",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/middle_block/middle_block.2/in_layers/in_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/in_layers/in_layers.2/Conv",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
@@ -9692,7 +9673,7 @@
   }],
   "ParameterType": "Reformat",
   "Origin": "SLICE",
-  "TacticValue": "0x0000000000000000",
+  "TacticValue": "0x00000000000003e8",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.2/emb_layers/emb_layers.1/Gemm]"
 },{
@@ -9930,7 +9911,7 @@
     "Name": "/middle_block/middle_block.2/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -9943,14 +9924,14 @@
     "Name": "/middle_block/middle_block.2/out_layers/out_layers.0/Cast_1_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
   }],
   "Outputs": [
   {
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.2/out_layers/out_layers.1/Sigmoid), /middle_block/middle_block.2/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "TacticValue": "0x0000000000000000",
   "StreamId": 0,
@@ -9963,14 +9944,14 @@
     "Name": "Reformatted Input Tensor 0 to PWN(PWN(/middle_block/middle_block.2/out_layers/out_layers.1/Sigmoid), /middle_block/middle_block.2/out_layers/out_layers.1/Mul)",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "Outputs": [
   {
     "Name": "/middle_block/middle_block.2/out_layers/out_layers.1/Mul_output_0",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
-    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
   }],
   "ParameterType": "PointWise",
   "ParameterSubType": "PointWiseExpression",
@@ -9984,15 +9965,35 @@
   "Literals": ["0.000000e+00f", "1.000000e+00f", "0.000000e+00f", "0.000000e+00f", "5.000000e-01f"],
   "NbOperations": 5,
   "Operations": ["auto const var0 = pwgen::iMul(literal4, arg0);", "auto const var1 = pwgen::iTanh(var0);", "auto const var2 = pwgen::iMul(var1, literal4);", "auto const var3 = pwgen::iPlus(var2, literal4);", "auto const var4 = pwgen::iMul(arg0, var3);"],
-  "TacticValue": "0x000000000000000a",
+  "TacticValue": "0x000000000000000c",
   "StreamId": 0,
   "Metadata": "[ONNX Layer: /middle_block/middle_block.2/out_layers/out_layers.1/Sigmoid]\u001e[ONNX Layer: /middle_block/middle_block.2/out_layers/out_layers.1/Mul]"
+},{
+  "Name": "Reformatting CopyNode for Input Tensor 0 to /middle_block/middle_block.2/out_layers/out_layers.3/Conv + /middle_block/middle_block.2/Add_1",
+  "LayerType": "NoOp",
+  "Inputs": [
+  {
+    "Name": "/middle_block/middle_block.2/out_layers/out_layers.1/Mul_output_0",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 2 == 0"
+  }],
+  "Outputs": [
+  {
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/out_layers/out_layers.3/Conv + /middle_block/middle_block.2/Add_1",
+    "Location": "Device",
+    "Dimensions": [1,1280,4,6],
+    "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"
+  }],
+  "TacticValue": "0x0000000000000000",
+  "StreamId": 0,
+  "Metadata": ""
 },{
   "Name": "/middle_block/middle_block.2/out_layers/out_layers.3/Conv + /middle_block/middle_block.2/Add_1",
   "LayerType": "CaskConvolution",
   "Inputs": [
   {
-    "Name": "/middle_block/middle_block.2/out_layers/out_layers.1/Mul_output_0",
+    "Name": "Reformatted Input Tensor 0 to /middle_block/middle_block.2/out_layers/out_layers.3/Conv + /middle_block/middle_block.2/Add_1",
     "Location": "Device",
     "Dimensions": [1,1280,4,6],
     "Format/Datatype": "Channel major FP16 format where channel % 8 == 0"

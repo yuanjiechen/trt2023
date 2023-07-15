@@ -18,12 +18,12 @@ from ldm.models.diffusion.ddpm import LatentDiffusion
 from ldm.util import log_txt_as_img, exists, instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
-#control_net_use_trt = True
 from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
 import tensorrt as trt
 from cuda import cuda, cudart
 import numpy as np
 from pathlib import Path
+import pickle
 
 class ControlledUnetModel(UNetModel):
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
@@ -322,9 +322,9 @@ class ControlLDM(LatentDiffusion):
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
 
-        if not Path("controlnet_fp16.engine").exists(): control_net_use_trt = False
-        control_net_use_trt = False ###################
-        if control_net_use_trt:
+        if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
+        if self.control_net_use_trt:
 
             device = torch.device("cuda")
             logger = trt.Logger(trt.Logger.INFO)
@@ -336,23 +336,7 @@ class ControlLDM(LatentDiffusion):
                 self.shape_list = [[[1, 320, 32, 48], 3], [[1, 320, 16, 24], 1], [[1, 640, 16, 24], 2], [[1, 640, 8, 12], 1], [[1, 1280, 8, 12], 2], [[1, 1280, 4, 6], 4]]
 
                 self.mid_tensors = [torch.zeros(box[0], device=device, dtype=torch.float32) for box in self.shape_list for _ in range(box[1]) ]
-                # print(len(self.mid_tensors))
-                # input()
-                # input()
-                # for box in self.mid_tensors:
-                #     print(box.size())
-                # input()
-                # self.stream = cuda.Stream()
-                # for binding in model:
-                #     size = trt.volume(model.get_binding_shape(binding))
-                #     dtype = trt.nptype(model.get_binding_dtype(binding))
-                #     host_mem = cuda.pagelocked_empty(size, dtype)
-                #     device_mem = cuda.mem_alloc(host_mem.nbytes)
-                #     self.bindings.append(int(device_mem))
-                #     if model.binding_is_input(binding):
-                #         self.inputs.append({'host': host_mem, 'device': device_mem})
-                #     else:
-                #         self.outputs.append({'host': host_mem, 'device': device_mem})
+
             
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
@@ -376,23 +360,24 @@ class ControlLDM(LatentDiffusion):
         else:
             # torch.onnx.export(self.control_model.eval(), (x_noisy, torch.cat(cond['c_concat'], 1), t, cond_txt), "./controlnet.onnx", opset_version=17, do_constant_folding=True)
             # raise
-            if control_net_use_trt:
-                outs = []
-                dtype_size = np.dtype(np.float32).itemsize
+            # with open("controlnet.pkl", "wb+") as f:
+            #     pickle.dump([x_noisy.cpu(), hint.cpu(), t.cpu(), cond_txt.cpu()], f)
+            # raise
+            if self.control_net_use_trt:
                 self.bindings[0] = int(x_noisy.data_ptr())
                 self.bindings[1] = int(hint.data_ptr())
                 self.bindings[2] = int(t.data_ptr())
                 self.bindings[3] = int(cond_txt.data_ptr())
+                # self.context.execute_v2(self.bindings)
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
                 for out, mid_out in zip(self.outputs, self.mid_tensors):
                     memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
-            
-            control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
-            control = [c * scale for c, scale in zip(control, self.control_scales)]
-            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+            # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
+            # control = [c * scale for c, scale in zip(control, self.control_scales)]
+            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=self.mid_tensors, only_mid_control=self.only_mid_control)
 
         return eps
 

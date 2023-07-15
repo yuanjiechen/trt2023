@@ -147,3 +147,4 @@ dmypy.json
 *.engine
 *.trt
 *.bin
+*.jpg
