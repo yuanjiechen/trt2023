@@ -17,3 +17,4 @@ if __name__ == '__main__':
         torch.onnx.export(hk.model.control_model.eval(), cuda_inputs, "./controlnet.onnx", opset_version=17, do_constant_folding=True)
     except BaseException as e:
         print(e)
+        raise
