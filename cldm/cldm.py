@@ -323,7 +323,7 @@ class ControlLDM(LatentDiffusion):
         self.control_scales = [1.0] * 13
 
         if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = True
+        else: self.control_net_use_trt = False
         if self.control_net_use_trt:
 
             device = torch.device("cuda")
@@ -349,35 +349,40 @@ class ControlLDM(LatentDiffusion):
         control = control.to(memory_format=torch.contiguous_format).float()
         return x, dict(c_crossattn=[c], c_concat=[control])
 
-    def apply_model(self, x_noisy, t, cond, *args, **kwargs):
+    @torch.no_grad()
+    def forward(self, x_noisy, t, cond_txt, hint):#, *args, **kwargs
 
-        assert isinstance(cond, dict)
-        diffusion_model = self.model.diffusion_model
-        cond_txt = torch.cat(cond['c_crossattn'], 1)
-        hint = torch.cat(cond['c_concat'], 1)
-        if cond['c_concat'] is None:
-            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=None, only_mid_control=self.only_mid_control)
-        else:
+        # assert isinstance(cond, dict)
+        # # diffusion_model = self.model.diffusion_model
+        # cond_txt = torch.cat(cond['c_crossattn'], 1)
+        # hint = torch.cat(cond['c_concat'], 1)
+        # if cond['c_concat'] is None:
+        #     eps = self.model.diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=None, only_mid_control=self.only_mid_control)
+        # else:
             # torch.onnx.export(self.control_model.eval(), (x_noisy, torch.cat(cond['c_concat'], 1), t, cond_txt), "./controlnet.onnx", opset_version=17, do_constant_folding=True)
             # raise
             # with open("controlnet.pkl", "wb+") as f:
             #     pickle.dump([x_noisy.cpu(), hint.cpu(), t.cpu(), cond_txt.cpu()], f)
             # raise
-            if self.control_net_use_trt:
-                self.bindings[0] = int(x_noisy.data_ptr())
-                self.bindings[1] = int(hint.data_ptr())
-                self.bindings[2] = int(t.data_ptr())
-                self.bindings[3] = int(cond_txt.data_ptr())
-                # self.context.execute_v2(self.bindings)
-                self.context.execute_async_v2(
-                    bindings=self.bindings,
-                    stream_handle=self.stream)
-                cudart.cudaStreamSynchronize(self.stream)
-                for out, mid_out in zip(self.outputs, self.mid_tensors):
-                    memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
-            # control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
-            # control = [c * scale for c, scale in zip(control, self.control_scales)]
-            eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=self.mid_tensors, only_mid_control=self.only_mid_control)
+
+            # if self.control_net_use_trt:
+            #     self.bindings[0] = int(x_noisy.data_ptr())
+            #     self.bindings[1] = int(hint.data_ptr())
+            #     self.bindings[2] = int(t.data_ptr())
+            #     self.bindings[3] = int(cond_txt.data_ptr())
+            #     # self.context.execute_v2(self.bindings)
+            #     self.context.execute_async_v2(
+            #         bindings=self.bindings,
+            #         stream_handle=self.stream)
+            #     cudart.cudaStreamSynchronize(self.stream)
+            #     for out, mid_out in zip(self.outputs, self.mid_tensors):
+            #         memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
+
+        control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
+        # for i, c in enumerate(self.control_scales):
+        #     self.mid_tensors[i].mul_(c)
+        control = [c * scale for c, scale in zip(control, self.control_scales)]
+        eps = self.model.diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
         return eps
 

@@ -6,13 +6,31 @@ from tqdm import tqdm
 
 from ldm.modules.diffusionmodules.util import make_ddim_sampling_parameters, make_ddim_timesteps, noise_like, extract_into_tensor
 
-
+import tensorrt as trt
+from cuda import cuda, cudart
+import numpy as np
+from pathlib import Path
+from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
+import pickle
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
         self.model = model
         self.ddpm_num_timesteps = model.num_timesteps
         self.schedule = schedule
+
+        if not Path("controlnet_full_fp16.engine").exists(): self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
+        if self.control_net_use_trt:
+
+            device = torch.device("cuda")
+            logger = trt.Logger(trt.Logger.INFO)
+            trt.init_libnvinfer_plugins(logger, '')
+            with open("controlnet_full_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+                model = runtime.deserialize_cuda_engine(f.read())
+                self.context = model.create_execution_context()
+                self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
+                self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=device)
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -184,12 +202,68 @@ class DDIMSampler(object):
                       dynamic_threshold=None):
         b, *_, device = *x.shape, x.device
 
-        if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
-            model_output = self.model.apply_model(x, t, c)
+        # cond_txt = torch.cat(c['c_crossattn'], 1)
+        # hint = torch.cat(c['c_concat'], 1)
+        # with open("controlnet_full.pkl", "wb+") as f:
+        #     pickle.dump([x, t, cond_txt, hint], f)
+        # raise
+        # torch.onnx.export(self.model, (x, t, cond_txt, hint), "./onnxs/controlnet_full.onnx", opset_version=17, do_constant_folding=True)
+        # raise
+        ###########################
+        if self.control_net_use_trt:
+            cond_txt = torch.cat(c['c_crossattn'], 1)
+            hint = torch.cat(c['c_concat'], 1)
+
+            self.bindings[0] = int(x.data_ptr())
+            self.bindings[1] = int(t.data_ptr())
+            self.bindings[2] = int(cond_txt.data_ptr())
+            self.bindings[3] = int(hint.data_ptr())
+            self.context.execute_async_v2(
+                bindings=self.bindings,
+                stream_handle=self.stream)
+            cudart.cudaStreamSynchronize(self.stream)
+            
+            memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+
+            if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
+                model_output = self.out_tensor
+
+            else:
+                model_t = self.out_tensor
+
+                cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
+                hint = torch.cat(unconditional_conditioning['c_concat'], 1)      
+
+                self.bindings[0] = int(x.data_ptr())
+                self.bindings[1] = int(t.data_ptr())
+                self.bindings[2] = int(cond_txt.data_ptr())
+                self.bindings[3] = int(hint.data_ptr())
+                self.context.execute_async_v2(
+                    bindings=self.bindings,
+                    stream_handle=self.stream)
+                cudart.cudaStreamSynchronize(self.stream)
+
+                memcopy_device_to_device(self.out_tensor2.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+                model_uncond = self.out_tensor2
+                # model_uncond = self.model(x, t, cond_txt, hint)
+                model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+
+        #########################
+
         else:
-            model_t = self.model.apply_model(x, t, c)
-            model_uncond = self.model.apply_model(x, t, unconditional_conditioning)
-            model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+            if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
+                cond_txt = torch.cat(c['c_crossattn'], 1)
+                hint = torch.cat(c['c_concat'], 1)
+                model_output = self.model(x, t, cond_txt, hint)
+            else:
+                cond_txt = torch.cat(c['c_crossattn'], 1)
+                hint = torch.cat(c['c_concat'], 1)
+                model_t = self.model(x, t, cond_txt, hint)
+                
+                cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
+                hint = torch.cat(unconditional_conditioning['c_concat'], 1)
+                model_uncond = self.model(x, t, cond_txt, hint)
+                model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
         if self.model.parameterization == "v":
             e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)

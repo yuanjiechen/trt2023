@@ -148,3 +148,4 @@ dmypy.json
 *.trt
 *.bin
 *.jpg
+onnxs/
