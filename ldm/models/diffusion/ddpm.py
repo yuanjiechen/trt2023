@@ -825,7 +825,9 @@ class LatentDiffusion(DDPM):
             z = rearrange(z, 'b h w c -> b c h w').contiguous()
 
         z = 1. / self.scale_factor * z
-        return self.first_stage_model.decode(z)
+        torch.onnx.export(self.first_stage_model.eval(), z, "./onnxs/vae_decoder.onnx", opset_version=17, do_constant_folding=True)
+        raise
+        return self.first_stage_model(z)#.decode
 
     @torch.no_grad()
     def encode_first_stage(self, x):

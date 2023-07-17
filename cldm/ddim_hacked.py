@@ -31,6 +31,7 @@ class DDIMSampler(object):
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
+                # self.inputs_stage2, self.outputs_stage2, self.bindings_stage2, self.stream_stage2 = allocate_buffers(model)
                 self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
 
     def register_buffer(self, name, attr):
