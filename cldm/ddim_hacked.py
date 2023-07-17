@@ -19,18 +19,19 @@ class DDIMSampler(object):
         self.ddpm_num_timesteps = model.num_timesteps
         self.schedule = schedule
 
+        self.device = torch.device("cuda")
         if not Path("controlnet_full_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
         if self.control_net_use_trt:
 
-            device = torch.device("cuda")
+            
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
             with open("controlnet_full_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
-                self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=device)
+                self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -113,6 +114,17 @@ class DDIMSampler(object):
                     print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
         self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose)
+        ########## Create tensor only once not 20 times !!!!!
+        alphas = self.ddim_alphas
+        alphas_prev = self.ddim_alphas_prev
+        sqrt_one_minus_alphas = self.ddim_sqrt_one_minus_alphas
+        sigmas = self.ddim_sigmas
+        
+        self.alphas = [torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
+        self.alphas_prev = [torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
+        self.sqrt_one_minus_alphas = [torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
+        self.sigmas = [torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
+        ##########
         # sampling
         C, H, W = shape
         size = (batch_size, C, H, W)
@@ -282,15 +294,15 @@ class DDIMSampler(object):
             assert self.model.parameterization == "eps", 'not implemented'
             e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
 
-        alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
-        alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
-        sqrt_one_minus_alphas = self.model.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
-        sigmas = self.model.ddim_sigmas_for_original_num_steps if use_original_steps else self.ddim_sigmas
+        # alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
+        # alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
+        # sqrt_one_minus_alphas = self.model.sqrt_one_minus_alphas_cumprod if use_original_steps else self.ddim_sqrt_one_minus_alphas
+        # sigmas = self.model.ddim_sigmas_for_original_num_steps if use_original_steps else self.ddim_sigmas
         # select parameters corresponding to the currently considered timestep
-        a_t = torch.full((b, 1, 1, 1), alphas[index], device=device)
-        a_prev = torch.full((b, 1, 1, 1), alphas_prev[index], device=device)
-        sigma_t = torch.full((b, 1, 1, 1), sigmas[index], device=device)
-        sqrt_one_minus_at = torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
+        a_t = self.alphas[index] #torch.full((b, 1, 1, 1), alphas[index], device=device)
+        a_prev = self.alphas_prev[index] #torch.full((b, 1, 1, 1), alphas_prev[index], device=device)
+        sigma_t = self.sigmas[index] #torch.full((b, 1, 1, 1), sigmas[index], device=device)
+        sqrt_one_minus_at = self.sqrt_one_minus_alphas[index] #torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
 
         # current prediction for x_0
         if self.model.parameterization != "v":
