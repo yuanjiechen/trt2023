@@ -120,10 +120,10 @@ class DDIMSampler(object):
         sqrt_one_minus_alphas = self.ddim_sqrt_one_minus_alphas
         sigmas = self.ddim_sigmas
         
-        self.alphas = [torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
-        self.alphas_prev = [torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
-        self.sqrt_one_minus_alphas = [torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
-        self.sigmas = [torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
+        self.alphas =  torch.reshape(alphas, [len(alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
+        self.alphas_prev = torch.from_numpy(alphas_prev).to(self.device, torch.float).reshape([len(alphas_prev), 1, 1, 1, 1]) #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
+        self.sqrt_one_minus_alphas = torch.reshape(sqrt_one_minus_alphas, [len(sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
+        self.sigmas = torch.reshape(sigmas, [len(sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
         ##########
         # sampling
         C, H, W = shape
