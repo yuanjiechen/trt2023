@@ -25,3 +25,4 @@
 3. Remove unused data calculation
 4. Optimizae the time comsuming layers
 5. Focus on main loop
+6. use GPU rather than numpy

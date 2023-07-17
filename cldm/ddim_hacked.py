@@ -113,7 +113,7 @@ class DDIMSampler(object):
                 if conditioning.shape[0] != batch_size:
                     print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
-        self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose)
+        self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose) # 0.7 ms
         ########## Create tensor only once not 20 times !!!!!
         alphas = self.ddim_alphas
         alphas_prev = self.ddim_alphas_prev
