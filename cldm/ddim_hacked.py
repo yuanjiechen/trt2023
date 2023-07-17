@@ -164,7 +164,15 @@ class DDIMSampler(object):
         print(f"Running DDIM Sampling with {total_steps} timesteps")
 
         iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
+        ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
+        c_cond_txt = torch.cat(cond['c_crossattn'], 1)
+        c_hint = torch.cat(cond['c_concat'], 1)
+        conds = [c_cond_txt, c_hint]
 
+        u_cond_trt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
+        u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
+        u_conds = [u_cond_trt, u_hint]
+        ############
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             ts = torch.full((b,), step, device=device, dtype=torch.long)
@@ -178,12 +186,12 @@ class DDIMSampler(object):
                 assert len(ucg_schedule) == len(time_range)
                 unconditional_guidance_scale = ucg_schedule[i]
 
-            outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
+            outs = self.p_sample_ddim(img, conds, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
                                       corrector_kwargs=corrector_kwargs,
                                       unconditional_guidance_scale=unconditional_guidance_scale,
-                                      unconditional_conditioning=unconditional_conditioning,
+                                      unconditional_conditioning=u_conds,
                                       dynamic_threshold=dynamic_threshold)
             img, pred_x0 = outs
             if callback: callback(i)
@@ -211,8 +219,8 @@ class DDIMSampler(object):
         # raise
         ###########################
         if self.control_net_use_trt:
-            cond_txt = torch.cat(c['c_crossattn'], 1)
-            hint = torch.cat(c['c_concat'], 1)
+            cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
+            hint = c[1] #torch.cat(c['c_concat'], 1)
 
             self.bindings[0] = int(x.data_ptr())
             self.bindings[1] = int(t.data_ptr())
@@ -231,8 +239,8 @@ class DDIMSampler(object):
             else:
                 model_t = self.out_tensor
 
-                cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
-                hint = torch.cat(unconditional_conditioning['c_concat'], 1)      
+                cond_txt = unconditional_conditioning[0] #torch.cat(unconditional_conditioning['c_crossattn'], 1)
+                hint = unconditional_conditioning[1] #torch.cat(unconditional_conditioning['c_concat'], 1)      
 
                 self.bindings[0] = int(x.data_ptr())
                 self.bindings[1] = int(t.data_ptr())
@@ -252,16 +260,16 @@ class DDIMSampler(object):
 
         else:
             if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
-                cond_txt = torch.cat(c['c_crossattn'], 1)
-                hint = torch.cat(c['c_concat'], 1)
+                cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
+                hint = c[1] #torch.cat(c['c_concat'], 1)
                 model_output = self.model(x, t, cond_txt, hint)
             else:
-                cond_txt = torch.cat(c['c_crossattn'], 1)
-                hint = torch.cat(c['c_concat'], 1)
+                cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
+                hint = c[1] #torch.cat(c['c_concat'], 1)
                 model_t = self.model(x, t, cond_txt, hint)
                 
-                cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
-                hint = torch.cat(unconditional_conditioning['c_concat'], 1)
+                cond_txt = unconditional_conditioning[0] # torch.cat(unconditional_conditioning['c_crossattn'], 1)
+                hint = unconditional_conditioning[1] #torch.cat(unconditional_conditioning['c_concat'], 1)
                 model_uncond = self.model(x, t, cond_txt, hint)
                 model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
