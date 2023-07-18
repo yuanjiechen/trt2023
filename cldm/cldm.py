@@ -24,14 +24,22 @@ from cuda import cuda, cudart
 import numpy as np
 from pathlib import Path
 import pickle
+import torch.nn.functional as F
 
 class ControlledUnetModel(UNetModel):
+    def init_steps(self):
+        step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
+        with torch.no_grad():
+            step_embed = [self.time_embed(val) for val in step_values]
+            self.step_dict = dict(zip(step_keys, step_embed))
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
         j = len(control) - 1
         with torch.no_grad():
-            t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-            emb = self.time_embed(t_emb)
+            # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
+            # emb = self.time_embed(t_emb)
+            emb = timesteps #self.step_dict[timesteps.item()]
             h = x.type(self.dtype)
             for module in self.input_blocks:
                 h = module(h, emb, context)
@@ -286,12 +294,21 @@ class ControlNet(nn.Module):
         self.middle_block_out = self.make_zero_conv(ch)
         self._feature_size += ch
 
+    def init_steps(self):
+        step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
+        with torch.no_grad():
+            step_embed = [self.time_embed(val) for val in step_values]
+            self.step_dict = dict(zip(step_keys, step_embed))
+
     def make_zero_conv(self, channels):
         return TimestepEmbedSequential(zero_module(conv_nd(self.dims, channels, channels, 1, padding=0)))
 
     def forward(self, x, hint, timesteps, context, **kwargs):
-        t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-        emb = self.time_embed(t_emb)
+        # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
+        # emb = self.time_embed(t_emb)
+
+        emb = timesteps #self.step_dict[timesteps.item()]
 
         guided_hint = self.input_hint_block(hint, emb, context)
 
@@ -350,7 +367,7 @@ class ControlLDM(LatentDiffusion):
         return x, dict(c_crossattn=[c], c_concat=[control])
 
     @torch.no_grad()
-    def forward(self, x_noisy, t, cond_txt, hint):#, *args, **kwargs
+    def forward(self, x_noisy, ts, ts_df, cond_txt, hint):#, *args, **kwargs
 
         # assert isinstance(cond, dict)
         # # diffusion_model = self.model.diffusion_model
@@ -378,11 +395,11 @@ class ControlLDM(LatentDiffusion):
             #     for out, mid_out in zip(self.outputs, self.mid_tensors):
             #         memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
 
-        control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
+        control = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
         # for i, c in enumerate(self.control_scales):
         #     self.mid_tensors[i].mul_(c)
         # control = [c * scale for c, scale in zip(control, self.control_scales)]
-        eps = self.model.diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
         return eps
 

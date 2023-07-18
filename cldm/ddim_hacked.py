@@ -21,6 +21,8 @@ class DDIMSampler(object):
         self.schedule = schedule
 
         self.device = torch.device("cuda")
+        self.model.control_model.init_steps()
+        self.model.model.diffusion_model.init_steps()
         if not Path("controlnet_full_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
         if self.control_net_use_trt:
@@ -181,7 +183,7 @@ class DDIMSampler(object):
 
         iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
         # print(time_range, type(time_range))
-        steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long)
+        steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
         c_cond_txt = torch.cat(cond['c_crossattn'], 1)
@@ -194,8 +196,10 @@ class DDIMSampler(object):
         ############
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
-            ts = steps[i] #torch.full((b,), step, device=device, dtype=torch.long)
-
+            t = steps[i].item()
+            ts = self.model.control_model.step_dict[steps[i].item()] #torch.full((b,), step, device=device, dtype=torch.long)
+            ts_df = self.model.model.diffusion_model.step_dict[steps[i].item()]
+            ts_all = [t, ts, ts_df]
             # if mask is not None:
             #     assert x0 is not None
             #     img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
@@ -205,7 +209,7 @@ class DDIMSampler(object):
             #     assert len(ucg_schedule) == len(time_range)
             #     unconditional_guidance_scale = ucg_schedule[i]
 
-            outs = self.p_sample_ddim(img, conds, ts, index=index, use_original_steps=ddim_use_original_steps,
+            outs = self.p_sample_ddim(img, conds, ts_all, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
                                       corrector_kwargs=corrector_kwargs,
@@ -228,23 +232,25 @@ class DDIMSampler(object):
                       unconditional_guidance_scale=1., unconditional_conditioning=None,
                       dynamic_threshold=None):
         # b, *_, device = *x.shape, x.device
-
-        # cond_txt = torch.cat(c['c_crossattn'], 1)
-        # hint = torch.cat(c['c_concat'], 1)
+        t_orig, ts, ts_df = t
+        # cond_txt = c[0]
+        # hint = c[1]
         # with open("controlnet_full.pkl", "wb+") as f:
-        #     pickle.dump([x, t, cond_txt, hint], f)
+        #     pickle.dump([x, ts, ts_df, cond_txt, hint], f)
         # raise
         # torch.onnx.export(self.model, (x, t, cond_txt, hint), "./onnxs/controlnet_full.onnx", opset_version=17, do_constant_folding=True)
         # raise
         ###########################
+        
         if self.control_net_use_trt:
             cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
             hint = c[1] #torch.cat(c['c_concat'], 1)
 
             self.bindings[0] = int(x.data_ptr())
-            self.bindings[1] = int(t.data_ptr())
-            self.bindings[2] = int(cond_txt.data_ptr())
-            self.bindings[3] = int(hint.data_ptr())
+            self.bindings[1] = int(ts.data_ptr())
+            self.bindings[2] = int(ts_df.data_ptr())
+            self.bindings[3] = int(cond_txt.data_ptr())
+            self.bindings[4] = int(hint.data_ptr())
             self.context.execute_async_v2(
                 bindings=self.bindings,
                 stream_handle=self.stream)
@@ -262,9 +268,10 @@ class DDIMSampler(object):
                 hint = unconditional_conditioning[1] #torch.cat(unconditional_conditioning['c_concat'], 1)      
 
                 self.bindings[0] = int(x.data_ptr())
-                self.bindings[1] = int(t.data_ptr())
-                self.bindings[2] = int(cond_txt.data_ptr())
-                self.bindings[3] = int(hint.data_ptr())
+                self.bindings[1] = int(ts.data_ptr())
+                self.bindings[2] = int(ts_df.data_ptr())
+                self.bindings[3] = int(cond_txt.data_ptr())
+                self.bindings[4] = int(hint.data_ptr())
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
@@ -281,25 +288,25 @@ class DDIMSampler(object):
             if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
                 cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
                 hint = c[1] #torch.cat(c['c_concat'], 1)
-                model_output = self.model(x, t, cond_txt, hint)
+                model_output = self.model(x, ts, ts_df, cond_txt, hint)
             else:
                 cond_txt = c[0] #torch.cat(c['c_crossattn'], 1)
                 hint = c[1] #torch.cat(c['c_concat'], 1)
-                model_t = self.model(x, t, cond_txt, hint)
+                model_t = self.model(x, ts, ts_df, cond_txt, hint)
                 
                 cond_txt = unconditional_conditioning[0] # torch.cat(unconditional_conditioning['c_crossattn'], 1)
                 hint = unconditional_conditioning[1] #torch.cat(unconditional_conditioning['c_concat'], 1)
-                model_uncond = self.model(x, t, cond_txt, hint)
+                model_uncond = self.model(x, ts, ts_df, cond_txt, hint)
                 model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
         if self.model.parameterization == "v":
-            e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
+            e_t = self.model.predict_eps_from_z_and_v(x, t_orig, model_output)
         else:
             e_t = model_output
 
         if score_corrector is not None:
             assert self.model.parameterization == "eps", 'not implemented'
-            e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
+            e_t = score_corrector.modify_score(self.model, e_t, x, t_orig, c, **corrector_kwargs)
 
         # alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
         # alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
@@ -315,7 +322,7 @@ class DDIMSampler(object):
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
-            pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
+            pred_x0 = self.model.predict_start_from_z_and_v(x, t_orig, model_output)
 
         if quantize_denoised:
             pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
