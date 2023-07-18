@@ -2,6 +2,7 @@
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 from einops import rearrange
 from typing import Optional, Any
@@ -40,7 +41,7 @@ def get_timestep_embedding(timesteps, embedding_dim):
 
 def nonlinearity(x):
     # swish
-    return x*torch.sigmoid(x)
+    return F.silu(x)#x*torch.sigmoid(x)
 
 
 def Normalize(in_channels, num_groups=32):
@@ -175,7 +176,7 @@ class AttnBlock(nn.Module):
                                         kernel_size=1,
                                         stride=1,
                                         padding=0)
-
+        self.c = int(self.in_channels) ** (-0.5)
     def forward(self, x):
         h_ = x
         h_ = self.norm(h_)
@@ -189,7 +190,7 @@ class AttnBlock(nn.Module):
         q = q.permute(0,2,1)   # b,hw,c
         k = k.reshape(b,c,h*w) # b,c,hw
         w_ = torch.bmm(q,k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-        w_ = w_ * (int(c)**(-0.5))
+        w_ = w_ * self.c #(int(c)**(-0.5))
         w_ = torch.nn.functional.softmax(w_, dim=2)
 
         # attend to values

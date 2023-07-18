@@ -26,3 +26,9 @@
 4. Optimizae the time comsuming layers
 5. Focus on main loop
 6. use GPU rather than numpy
+7. cv2.canny
+8. ddim_hacked.py -> make_schedule 49~58, self.model.parameterization (Done)
+9. controlnet timestep calculation -> to initial
+10. VAE decoder ->nonlinearity -> silu (Done)
+11. VAE decoder -> attention -> sqrt(d) -> constant
+12. attention groupnorm -> layernorm ?

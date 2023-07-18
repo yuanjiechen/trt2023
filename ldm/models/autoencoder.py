@@ -10,7 +10,7 @@ from ldm.util import instantiate_from_config
 from ldm.modules.ema import LitEma
 
 
-class AutoencoderKL(pl.LightningModule):
+class AutoencoderKL(torch.nn.Module):
     def __init__(self,
                  ddconfig,
                  lossconfig,
