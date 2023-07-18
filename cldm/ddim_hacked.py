@@ -226,7 +226,7 @@ class DDIMSampler(object):
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None,
                       dynamic_threshold=None):
-        b, *_, device = *x.shape, x.device
+        # b, *_, device = *x.shape, x.device
 
         # cond_txt = torch.cat(c['c_crossattn'], 1)
         # hint = torch.cat(c['c_concat'], 1)
