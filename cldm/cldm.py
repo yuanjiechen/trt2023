@@ -322,20 +322,20 @@ class ControlLDM(LatentDiffusion):
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
 
-        if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = False
-        if self.control_net_use_trt:
+        # if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
+        # else: self.control_net_use_trt = False
+        # if self.control_net_use_trt:
 
-            device = torch.device("cuda")
-            logger = trt.Logger(trt.Logger.INFO)
-            trt.init_libnvinfer_plugins(logger, '')
-            with open("controlnet_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
-                model = runtime.deserialize_cuda_engine(f.read())
-                self.context = model.create_execution_context()
-                self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
-                self.shape_list = [[[1, 320, 32, 48], 3], [[1, 320, 16, 24], 1], [[1, 640, 16, 24], 2], [[1, 640, 8, 12], 1], [[1, 1280, 8, 12], 2], [[1, 1280, 4, 6], 4]]
+        #     device = torch.device("cuda")
+        #     logger = trt.Logger(trt.Logger.INFO)
+        #     trt.init_libnvinfer_plugins(logger, '')
+        #     with open("controlnet_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+        #         model = runtime.deserialize_cuda_engine(f.read())
+        #         self.context = model.create_execution_context()
+        #         self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
+        #         self.shape_list = [[[1, 320, 32, 48], 3], [[1, 320, 16, 24], 1], [[1, 640, 16, 24], 2], [[1, 640, 8, 12], 1], [[1, 1280, 8, 12], 2], [[1, 1280, 4, 6], 4]]
 
-                self.mid_tensors = [torch.zeros(box[0], device=device, dtype=torch.float32) for box in self.shape_list for _ in range(box[1]) ]
+        #         self.mid_tensors = [torch.zeros(box[0], device=device, dtype=torch.float32) for box in self.shape_list for _ in range(box[1]) ]
 
             
     @torch.no_grad()

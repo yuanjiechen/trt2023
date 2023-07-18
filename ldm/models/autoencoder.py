@@ -10,7 +10,7 @@ from ldm.util import instantiate_from_config
 from ldm.modules.ema import LitEma
 
 
-class AutoencoderKL(pl.LightningModule):
+class AutoencoderKL(torch.nn.Module):
     def __init__(self,
                  ddconfig,
                  lossconfig,
@@ -85,12 +85,12 @@ class AutoencoderKL(pl.LightningModule):
         posterior = DiagonalGaussianDistribution(moments)
         return posterior
 
-    def decode(self, z):
+    def forward(self, z):
         z = self.post_quant_conv(z)
         dec = self.decoder(z)
         return dec
 
-    def forward(self, input, sample_posterior=True):
+    def forward2(self, input, sample_posterior=True):
         posterior = self.encode(input)
         if sample_posterior:
             z = posterior.sample()

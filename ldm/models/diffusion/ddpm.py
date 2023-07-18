@@ -27,7 +27,11 @@ from ldm.models.autoencoder import IdentityFirstStage, AutoencoderKL
 from ldm.modules.diffusionmodules.util import make_beta_schedule, extract_into_tensor, noise_like
 from ldm.models.diffusion.ddim import DDIMSampler
 
-
+from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
+import tensorrt as trt
+from cuda import cuda, cudart
+import numpy as np
+from pathlib import Path
 __conditioning_keys__ = {'concat': 'c_concat',
                          'crossattn': 'c_crossattn',
                          'adm': 'y'}
@@ -581,6 +585,19 @@ class LatentDiffusion(DDPM):
             assert self.use_ema
             self.model_ema.reset_num_updates()
 
+        device = torch.device("cuda")
+        if not Path("controlnet_vae_fp16.engine").exists(): self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
+        if self.control_net_use_trt:
+
+            logger = trt.Logger(trt.Logger.INFO)
+            trt.init_libnvinfer_plugins(logger, '')
+            with open("controlnet_vae_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+                model = runtime.deserialize_cuda_engine(f.read())
+                self.context = model.create_execution_context()
+                self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
+                self.out_tensor = torch.zeros([1, 3, 256, 384], dtype=torch.float32, device=device)
+
     def make_cond_schedule(self, ):
         self.cond_ids = torch.full(size=(self.num_timesteps,), fill_value=self.num_timesteps - 1, dtype=torch.long)
         ids = torch.round(torch.linspace(0, self.num_timesteps - 1, self.num_timesteps_cond)).long()
@@ -615,9 +632,9 @@ class LatentDiffusion(DDPM):
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
         self.first_stage_model = model.eval()
-        self.first_stage_model.train = disabled_train
-        for param in self.first_stage_model.parameters():
-            param.requires_grad = False
+        # self.first_stage_model.train = disabled_train
+        # for param in self.first_stage_model.parameters():
+        #     param.requires_grad = False
 
     def instantiate_cond_stage(self, config):
         if not self.cond_stage_trainable:
@@ -825,7 +842,23 @@ class LatentDiffusion(DDPM):
             z = rearrange(z, 'b h w c -> b c h w').contiguous()
 
         z = 1. / self.scale_factor * z
-        return self.first_stage_model.decode(z)
+        if self.control_net_use_trt:
+            self.bindings[0] = int(z.data_ptr())
+            self.context.execute_async_v2(
+                bindings=self.bindings,
+                stream_handle=self.stream)
+            cudart.cudaStreamSynchronize(self.stream)
+            memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+
+            return self.out_tensor
+            # import pickle
+            # with open("controlnet_vae.pkl", "wb+") as f:
+            #     pickle.dump([z.cpu()], f)
+
+            # torch.onnx.export(self.first_stage_model, z, "./onnxs/controlnet_vae.onnx", opset_version=17, do_constant_folding=True)
+            # input()
+        else:
+            return self.first_stage_model(z) #decode
 
     @torch.no_grad()
     def encode_first_stage(self, x):

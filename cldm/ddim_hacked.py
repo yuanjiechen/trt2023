@@ -12,6 +12,7 @@ import numpy as np
 from pathlib import Path
 from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
 import pickle
+import time
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
