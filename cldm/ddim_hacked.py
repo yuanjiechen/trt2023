@@ -129,7 +129,7 @@ class DDIMSampler(object):
         # sampling
         C, H, W = shape
         size = (batch_size, C, H, W)
-        print(f'Data shape for DDIM sampling is {size}, eta {eta}')
+        # print(f'Data shape for DDIM sampling is {size}, eta {eta}')
 
         samples, intermediates = self.ddim_sampling(conditioning, size,
                                                     callback=callback,
@@ -174,9 +174,12 @@ class DDIMSampler(object):
         intermediates = {'x_inter': [img], 'pred_x0': [img]}
         time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
-        print(f"Running DDIM Sampling with {total_steps} timesteps")
+        # print(f"Running DDIM Sampling with {total_steps} timesteps")
 
         iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
+        # print(time_range, type(time_range))
+        steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long)
+
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
         c_cond_txt = torch.cat(cond['c_crossattn'], 1)
         c_hint = torch.cat(cond['c_concat'], 1)
@@ -188,16 +191,16 @@ class DDIMSampler(object):
         ############
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
-            ts = torch.full((b,), step, device=device, dtype=torch.long)
+            ts = steps[i] #torch.full((b,), step, device=device, dtype=torch.long)
 
-            if mask is not None:
-                assert x0 is not None
-                img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
-                img = img_orig * mask + (1. - mask) * img
+            # if mask is not None:
+            #     assert x0 is not None
+            #     img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
+            #     img = img_orig * mask + (1. - mask) * img
 
-            if ucg_schedule is not None:
-                assert len(ucg_schedule) == len(time_range)
-                unconditional_guidance_scale = ucg_schedule[i]
+            # if ucg_schedule is not None:
+            #     assert len(ucg_schedule) == len(time_range)
+            #     unconditional_guidance_scale = ucg_schedule[i]
 
             outs = self.p_sample_ddim(img, conds, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
@@ -207,12 +210,12 @@ class DDIMSampler(object):
                                       unconditional_conditioning=u_conds,
                                       dynamic_threshold=dynamic_threshold)
             img, pred_x0 = outs
-            if callback: callback(i)
-            if img_callback: img_callback(pred_x0, i)
+            # if callback: callback(i)
+            # if img_callback: img_callback(pred_x0, i)
 
-            if index % log_every_t == 0 or index == total_steps - 1:
-                intermediates['x_inter'].append(img)
-                intermediates['pred_x0'].append(pred_x0)
+            # if index % log_every_t == 0 or index == total_steps - 1:
+            #     intermediates['x_inter'].append(img)
+            #     intermediates['pred_x0'].append(pred_x0)
 
         return img, intermediates
 
