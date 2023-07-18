@@ -381,7 +381,7 @@ class ControlLDM(LatentDiffusion):
         control = self.control_model(x=x_noisy, hint=hint, timesteps=t, context=cond_txt)
         # for i, c in enumerate(self.control_scales):
         #     self.mid_tensors[i].mul_(c)
-        control = [c * scale for c, scale in zip(control, self.control_scales)]
+        # control = [c * scale for c, scale in zip(control, self.control_scales)]
         eps = self.model.diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
         return eps
