@@ -13,15 +13,21 @@ if __name__ == '__main__':
     with open("./controlnet_vae.pkl", "rb") as f:
         inputs_vae = pickle.load(f)
 
+    # with open("./controlnet_with_vae.pkl", "rb") as f:
+        # inputs_full = pickle.load(f)
+
     cuda_inputs = []
     cuda_vae = []
+    # cuda_full = []
 
     for inp in inputs: cuda_inputs.append( inp.cuda())
     for inp in inputs_vae: cuda_vae.append(inp.cuda())
-    # print(type(hk.model.first_stage_model.eval()))
+    # for inp in inputs_full: cuda_full.append(inp.cuda())
+
     try:
         torch.onnx.export(hk.model.eval(), tuple(cuda_inputs), "./onnxs/controlnet_full.onnx", opset_version=17, do_constant_folding=True)
         torch.onnx.export(hk.model.first_stage_model, tuple(cuda_vae), "./onnxs/controlnet_vae.onnx", opset_version=17, do_constant_folding=True)
+        # torch.onnx.export(hk.model.full_model, tuple(cuda_full), "./onnxs/controlnet_with_vae.onnx", opset_version=17, do_constant_folding=True)
     except BaseException as e:
         print(e)
         raise

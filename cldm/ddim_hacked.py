@@ -15,11 +15,50 @@ import pickle
 import time
 
 class Control_Diff_VAE(torch.nn.Module):
-    def __init__(self, control_model, diff_model, vae_model, 
-                       steps, control_model_step_dict, diff_model_step_dict, 
-                       alphas, alphas_prev, sqrt_one_minus_alphas, sigmas) -> None:
+    def __init__(self, control_model, vae_model):
         super().__init__()
+        self.control_model = control_model
+        self.vae_model = vae_model
 
+        self.device = torch.device("cuda")
+        # self.noise = torch.randn()
+    
+    def forward(self, img, control_model_steps, diff_model_steps, 
+                c_cond_txt, c_hint, u_cond_txt, u_hint, 
+                alphas, alphas_prev, sqrt_one_minus_alphas, sigmas):
+
+        total_steps = 20
+
+        rand_noise = torch.randn(img.shape, device=self.device)
+        for i in range(total_steps):
+
+            index = total_steps - i - 1
+
+            ts = control_model_steps[i] 
+            ts_df = diff_model_steps[i]
+
+            model_t = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
+            model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, u_hint)
+            model_output = model_uncond + 9 * (model_t - model_uncond)
+            #########################
+            e_t = model_output
+
+            a_t = alphas[index]
+            a_prev = alphas_prev[index]
+            sigma_t = sigmas[index] 
+            sqrt_one_minus_at = sqrt_one_minus_alphas[index]
+
+            pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()
+
+            dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
+            noise = sigma_t * rand_noise 
+
+            img = a_prev.sqrt() * pred_x0 + dir_xt + noise
+
+        img = 1. / 0.18215 * img
+        img = self.vae_model(img)
+
+        return img #, intermediates
 
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
@@ -33,6 +72,8 @@ class DDIMSampler(object):
         self.model.model.diffusion_model.init_steps()
 
         self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
+        # self.full_model = Control_Diff_VAE(self.model, self.model.first_stage_model)
+
         if not Path("controlnet_full_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
         if self.control_net_use_trt:
@@ -45,6 +86,18 @@ class DDIMSampler(object):
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
                 # self.inputs_stage2, self.outputs_stage2, self.bindings_stage2, self.stream_stage2 = allocate_buffers(model)
                 self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
+
+        # if not Path("controlnet_with_vae_fp16.engine").exists(): self.control_net_use_trt = False
+        # else: self.control_net_use_trt = False
+        # if self.control_net_use_trt:
+
+        #     logger = trt.Logger(trt.Logger.INFO)
+        #     trt.init_libnvinfer_plugins(logger, '')
+        #     with open("controlnet_with_vae_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+        #         model = runtime.deserialize_cuda_engine(f.read())
+        #         self.context = model.create_execution_context()
+        #         self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
+        #         # self.out_tensor, self.
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -196,11 +249,27 @@ class DDIMSampler(object):
         u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         # u_conds = [u_cond_txt, u_hint]
         ############
+        
+        ############# torch full model
+        # contorl_model_steps = torch.stack(self.model.control_model.step_dict, dim=0).cuda()
+        # diff_model_steps = torch.stack(self.model.model.diffusion_model.step_dict, dim=0).cuda()
+        # with open("controlnet_with_vae.pkl", "wb+") as f:
+        #     pickle.dump([img, contorl_model_steps, diff_model_steps, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas, alphas_prev, sqrt_one_minus_alphas, sigmas], f)
+        # torch.onnx.export(self.full_model, (img, contorl_model_steps, diff_model_steps, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas, alphas_prev, sqrt_one_minus_alphas, sigmas), "./onnxs/controlnet_with_vae.onnx", opset_version=17, do_constant_folding=True)
+        # raise
+
+        # if self.control_net_use_trt:
+        #     pass
+        # img = self.full_model(img, contorl_model_steps, diff_model_steps, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas, alphas_prev, sqrt_one_minus_alphas, sigmas)
+        # return img
+    
+        #############
+
         for i in range(total_steps):
 
             index = total_steps - i - 1
             # t = steps[i].item()
-            ts = self.model.control_model.step_dict[steps[i].item()] #torch.full((b,), step, device=device, dtype=torch.long)
+            ts = self.model.control_model.step_dict[steps[i].item()] 
             ts_df = self.model.model.diffusion_model.step_dict[steps[i].item()]
             # ts_all = [t, ts, ts_df]
 
