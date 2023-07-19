@@ -13,6 +13,14 @@ from pathlib import Path
 from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_device, memcopy_device_to_device
 import pickle
 import time
+
+class Control_Diff_VAE(torch.nn.Module):
+    def __init__(self, control_model, diff_model, vae_model, 
+                       steps, control_model_step_dict, diff_model_step_dict, 
+                       alphas, alphas_prev, sqrt_one_minus_alphas, sigmas) -> None:
+        super().__init__()
+
+
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -23,11 +31,12 @@ class DDIMSampler(object):
         self.device = torch.device("cuda")
         self.model.control_model.init_steps()
         self.model.model.diffusion_model.init_steps()
+
+        self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
         if not Path("controlnet_full_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
         if self.control_net_use_trt:
 
-            
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
             with open("controlnet_full_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
@@ -117,25 +126,14 @@ class DDIMSampler(object):
         #         if conditioning.shape[0] != batch_size:
         #             print(f"Warning: Got {conditioning.shape[0]} conditionings but batch-size is {batch_size}")
 
-        self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose) # 0.7 ms -> 0.4 ms
+        # self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=verbose) # 0.7 ms -> 0.4 ms
 
-        ########## Create tensor only once not 20 times !!!!!
-        alphas = self.ddim_alphas
-        alphas_prev = self.ddim_alphas_prev
-        sqrt_one_minus_alphas = self.ddim_sqrt_one_minus_alphas
-        sigmas = self.ddim_sigmas
-        
-        self.alphas =  torch.reshape(alphas, [len(alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
-        self.alphas_prev = torch.from_numpy(alphas_prev).to(self.device, torch.float).reshape([len(alphas_prev), 1, 1, 1, 1]) #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
-        self.sqrt_one_minus_alphas = torch.reshape(sqrt_one_minus_alphas, [len(sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
-        self.sigmas = torch.reshape(sigmas, [len(sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
-        ##########
         # sampling
         C, H, W = shape
         size = (batch_size, C, H, W)
         # print(f'Data shape for DDIM sampling is {size}, eta {eta}')
 
-        samples, intermediates = self.ddim_sampling(conditioning, size,
+        samples = self.ddim_sampling(conditioning, size,
                                                     callback=callback,
                                                     img_callback=img_callback,
                                                     quantize_denoised=quantize_x0,
@@ -152,7 +150,7 @@ class DDIMSampler(object):
                                                     dynamic_threshold=dynamic_threshold,
                                                     ucg_schedule=ucg_schedule
                                                     )
-        return samples, intermediates
+        return samples #, intermediates
 
     @torch.no_grad()
     def ddim_sampling(self, cond, shape,
@@ -163,69 +161,115 @@ class DDIMSampler(object):
                       unconditional_guidance_scale=1., unconditional_conditioning=None, dynamic_threshold=None,
                       ucg_schedule=None):
         device = self.model.betas.device
-        b = shape[0]
+        # b = shape[0]
+        ########## Create tensor only once not 20 times !!!!!   
+        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
+        alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]) #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
+        sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
+        sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
+        ##########
+
         if x_T is None:
             img = torch.randn(shape, device=device)
         else:
             img = x_T
 
-        self.noise = torch.randn(img.shape, device=device)
+        rand_noise = torch.randn(img.shape, device=device)
         if timesteps is None:
             timesteps = self.ddpm_num_timesteps if ddim_use_original_steps else self.ddim_timesteps
         elif timesteps is not None and not ddim_use_original_steps:
             subset_end = int(min(timesteps / self.ddim_timesteps.shape[0], 1) * self.ddim_timesteps.shape[0]) - 1
             timesteps = self.ddim_timesteps[:subset_end]
 
-        intermediates = {'x_inter': [img], 'pred_x0': [img]}
+        #intermediates = {'x_inter': [img], 'pred_x0': [img]}
         time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
-        # print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        # iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
-        # print(time_range, type(time_range))
         steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
         c_cond_txt = torch.cat(cond['c_crossattn'], 1)
         c_hint = torch.cat(cond['c_concat'], 1)
-        conds = [c_cond_txt, c_hint]
+        # conds = [c_cond_txt, c_hint]
 
-        u_cond_trt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
+        u_cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
         u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
-        u_conds = [u_cond_trt, u_hint]
+        # u_conds = [u_cond_txt, u_hint]
         ############
         for i in range(total_steps):
-        # for i, step in enumerate(iterator):
+
             index = total_steps - i - 1
-            t = steps[i].item()
+            # t = steps[i].item()
             ts = self.model.control_model.step_dict[steps[i].item()] #torch.full((b,), step, device=device, dtype=torch.long)
             ts_df = self.model.model.diffusion_model.step_dict[steps[i].item()]
-            ts_all = [t, ts, ts_df]
-            # if mask is not None:
-            #     assert x0 is not None
-            #     img_orig = self.model.q_sample(x0, ts)  # TODO: deterministic forward pass?
-            #     img = img_orig * mask + (1. - mask) * img
+            # ts_all = [t, ts, ts_df]
 
-            # if ucg_schedule is not None:
-            #     assert len(ucg_schedule) == len(time_range)
-            #     unconditional_guidance_scale = ucg_schedule[i]
+            if self.control_net_use_trt:
 
-            outs = self.p_sample_ddim(img, conds, ts_all, index=index, use_original_steps=ddim_use_original_steps,
-                                      quantize_denoised=quantize_denoised, temperature=temperature,
-                                      noise_dropout=noise_dropout, score_corrector=score_corrector,
-                                      corrector_kwargs=corrector_kwargs,
-                                      unconditional_guidance_scale=unconditional_guidance_scale,
-                                      unconditional_conditioning=u_conds,
-                                      dynamic_threshold=dynamic_threshold)
-            img, pred_x0 = outs
-            # if callback: callback(i)
-            # if img_callback: img_callback(pred_x0, i)
+                self.bindings[0] = int(img.data_ptr())
+                self.bindings[1] = int(ts.data_ptr())
+                self.bindings[2] = int(ts_df.data_ptr())
+                self.bindings[3] = int(c_cond_txt.data_ptr())
+                self.bindings[4] = int(c_hint.data_ptr())
+                self.context.execute_async_v2(
+                    bindings=self.bindings,
+                    stream_handle=self.stream)
+                cudart.cudaStreamSynchronize(self.stream)
+                
+                memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
 
-            # if index % log_every_t == 0 or index == total_steps - 1:
-            #     intermediates['x_inter'].append(img)
-            #     intermediates['pred_x0'].append(pred_x0)
+                # if u_conds is None or unconditional_guidance_scale == 1.:
+                #     model_output = self.out_tensor
 
-        return img, intermediates
+                # else:
+                model_t = self.out_tensor   
+
+                self.bindings[0] = int(img.data_ptr())
+                self.bindings[1] = int(ts.data_ptr())
+                self.bindings[2] = int(ts_df.data_ptr())
+                self.bindings[3] = int(u_cond_txt.data_ptr())
+                self.bindings[4] = int(u_hint.data_ptr())
+                self.context.execute_async_v2(
+                    bindings=self.bindings,
+                    stream_handle=self.stream)
+                cudart.cudaStreamSynchronize(self.stream)
+
+                memcopy_device_to_device(self.out_tensor2.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+                model_uncond = self.out_tensor2
+
+                model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+
+            else:
+                model_t = self.model(img, ts, ts_df, c_cond_txt, c_hint)
+                model_uncond = self.model(img, ts, ts_df, u_cond_txt, u_hint)
+                model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+            #########################
+            e_t = model_output
+
+            a_t = alphas[index]
+            a_prev = alphas_prev[index]
+            sigma_t = sigmas[index] 
+            sqrt_one_minus_at = sqrt_one_minus_alphas[index]
+
+            pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()
+
+            dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
+            noise = sigma_t * rand_noise 
+
+            img = a_prev.sqrt() * pred_x0 + dir_xt + noise
+
+            ################ orig func call
+                # outs = self.p_sample_ddim(img, conds, ts_all, index=index, use_original_steps=ddim_use_original_steps,
+                #                           quantize_denoised=quantize_denoised, temperature=temperature,
+                #                           noise_dropout=noise_dropout, score_corrector=score_corrector,
+                #                           corrector_kwargs=corrector_kwargs,
+                #                           unconditional_guidance_scale=unconditional_guidance_scale,
+                #                           unconditional_conditioning=u_conds,
+                #                           dynamic_threshold=dynamic_threshold)
+                # img, pred_x0 = outs
+            ################ orig func call
+
+        return img #, intermediates
 
     @torch.no_grad()
     def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
@@ -233,7 +277,8 @@ class DDIMSampler(object):
                       unconditional_guidance_scale=1., unconditional_conditioning=None,
                       dynamic_threshold=None):
         # b, *_, device = *x.shape, x.device
-        t_orig, ts, ts_df = t
+        # t_orig, 
+        ts, ts_df = t
         # cond_txt = c[0]
         # hint = c[1]
         # with open("controlnet_full.pkl", "wb+") as f:
@@ -299,15 +344,15 @@ class DDIMSampler(object):
                 hint = unconditional_conditioning[1] #torch.cat(unconditional_conditioning['c_concat'], 1)
                 model_uncond = self.model(x, ts, ts_df, cond_txt, hint)
                 model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+        # eps
+        # if self.model.parameterization == "v":
+            # e_t = self.model.predict_eps_from_z_and_v(x, t_orig, model_output)
+        # else:
+        e_t = model_output
 
-        if self.model.parameterization == "v":
-            e_t = self.model.predict_eps_from_z_and_v(x, t_orig, model_output)
-        else:
-            e_t = model_output
-
-        if score_corrector is not None:
-            assert self.model.parameterization == "eps", 'not implemented'
-            e_t = score_corrector.modify_score(self.model, e_t, x, t_orig, c, **corrector_kwargs)
+        # if score_corrector is not None:
+        #     assert self.model.parameterization == "eps", 'not implemented'
+        #     e_t = score_corrector.modify_score(self.model, e_t, x, t_orig, c, **corrector_kwargs)
 
         # alphas = self.model.alphas_cumprod if use_original_steps else self.ddim_alphas
         # alphas_prev = self.model.alphas_cumprod_prev if use_original_steps else self.ddim_alphas_prev
@@ -320,22 +365,22 @@ class DDIMSampler(object):
         sqrt_one_minus_at = self.sqrt_one_minus_alphas[index] #torch.full((b, 1, 1, 1), sqrt_one_minus_alphas[index],device=device)
 
         # current prediction for x_0
-        if self.model.parameterization != "v":
-            pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
-        else:
-            pred_x0 = self.model.predict_start_from_z_and_v(x, t_orig, model_output)
+        # if self.model.parameterization != "v":
+        pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
+        # else:
+        #     pred_x0 = self.model.predict_start_from_z_and_v(x, t_orig, model_output)
 
-        if quantize_denoised:
-            pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
+        # if quantize_denoised:
+        #     pred_x0, _, *_ = self.model.first_stage_model.quantize(pred_x0)
 
-        if dynamic_threshold is not None:
-            raise NotImplementedError()
+        # if dynamic_threshold is not None:
+        #     raise NotImplementedError()
 
         # direction pointing to x_t
         dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
         noise = sigma_t * self.noise #noise_like(x.shape, device, repeat_noise) * temperature
-        if noise_dropout > 0.:
-            noise = torch.nn.functional.dropout(noise, p=noise_dropout)
+        # if noise_dropout > 0.:
+        #     noise = torch.nn.functional.dropout(noise, p=noise_dropout)
         x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
         return x_prev, pred_x0
 
