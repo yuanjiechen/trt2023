@@ -181,7 +181,7 @@ class DDIMSampler(object):
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
         # print(f"Running DDIM Sampling with {total_steps} timesteps")
 
-        iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
+        # iterator = tqdm(time_range, desc='DDIM Sampler', total=total_steps)
         # print(time_range, type(time_range))
         steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
@@ -194,7 +194,8 @@ class DDIMSampler(object):
         u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         u_conds = [u_cond_trt, u_hint]
         ############
-        for i, step in enumerate(iterator):
+        for i in range(total_steps):
+        # for i, step in enumerate(iterator):
             index = total_steps - i - 1
             t = steps[i].item()
             ts = self.model.control_model.step_dict[steps[i].item()] #torch.full((b,), step, device=device, dtype=torch.long)

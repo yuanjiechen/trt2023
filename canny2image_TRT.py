@@ -16,7 +16,7 @@ from annotator.canny import CannyDetector
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
-
+import time
 class hackathon():
 
     def initialize(self):
