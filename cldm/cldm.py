@@ -311,7 +311,7 @@ class ControlNet(nn.Module):
 
         emb = timesteps #self.step_dict[timesteps.item()]
 
-        guided_hint = self.input_hint_block(hint, None, None)
+        guided_hint = hint#self.input_hint_block(hint, None, None)
 
         outs = []
 

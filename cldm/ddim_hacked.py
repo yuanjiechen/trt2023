@@ -24,12 +24,12 @@ class Control_Diff_VAE(torch.nn.Module):
         # self.noise = torch.randn()
     
     def forward(self, img, ts, ts_df, 
-                c_cond_txt, c_hint, u_cond_txt, u_hint, 
+                c_cond_txt, c_hint, u_cond_txt, 
                 a_t, a_prev, sqrt_one_minus_at):
 
-
+        noise = torch.randn(img.shape, device=self.device)
         model_t = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, u_hint)
+        model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, c_hint)
         model_output = model_uncond + 9 * (model_t - model_uncond)
         #########################
         e_t = model_output
@@ -38,13 +38,20 @@ class Control_Diff_VAE(torch.nn.Module):
 
         dir_xt = (1. - a_prev).sqrt() * e_t
 
-        img = a_prev.sqrt() * pred_x0 + dir_xt
+        img = a_prev.sqrt() * pred_x0 + dir_xt + 0.006 * noise
 
         # img = 1. / 0.18215 * img
         # img = self.vae_model(img)
 
         return img #, intermediates
 
+class Control_input_block(torch.nn.Module):
+    def __init__(self, input_block) -> None:
+        super().__init__()
+        self.input_block = input_block
+
+    def forward(self, c_hint):
+        return self.input_block(c_hint, None)#, self.input_block(u_hint, None)
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -58,6 +65,7 @@ class DDIMSampler(object):
 
         self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
         self.full_model = Control_Diff_VAE(self.model)
+        self.control_input_block = Control_input_block(self.model.control_model.input_hint_block)
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
@@ -69,9 +77,13 @@ class DDIMSampler(object):
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
-                # self.inputs_stage2, self.outputs_stage2, self.bindings_stage2, self.stream_stage2 = allocate_buffers(model)
-                self.out_tensor, self.out_tensor2 = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device), torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
+                self.out_tensor = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
 
+            with open("hint_block_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
+                model_hint = runtime.deserialize_cuda_engine(f.read())
+                self.context_hint = model_hint.create_execution_context()
+                self.inputs_hint, self.outputs_hint, self.bindings_hint, self.stream_hint = allocate_buffers(model_hint)
+                self.c_hint_trt = torch.zeros([1, 320, 32, 48], dtype=torch.float32, device=self.device)
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -105,10 +117,7 @@ class DDIMSampler(object):
         self.register_buffer('ddim_alphas', ddim_alphas)
         self.register_buffer('ddim_alphas_prev', ddim_alphas_prev)
         self.register_buffer('ddim_sqrt_one_minus_alphas', np.sqrt(1. - ddim_alphas))
-        # sigmas_for_original_sampling_steps = ddim_eta * torch.sqrt(
-        #     (1 - self.alphas_cumprod_prev) / (1 - self.alphas_cumprod) * (
-        #                 1 - self.alphas_cumprod / self.alphas_cumprod_prev))
-        # self.register_buffer('ddim_sigmas_for_original_num_steps', sigmas_for_original_sampling_steps)
+
 
     @torch.no_grad()
     def sample(self,
@@ -217,14 +226,24 @@ class DDIMSampler(object):
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
         c_cond_txt = torch.cat(cond['c_crossattn'], 1)
         c_hint = torch.cat(cond['c_concat'], 1)
-        # conds = [c_cond_txt, c_hint]
 
         u_cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
         u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
-        # u_conds = [u_cond_txt, u_hint]
         ############
+        # with open("hint_block.pkl", "wb+") as f:
+        #     pickle.dump([c_hint], f)
+        if self.control_net_use_trt:
+            self.bindings_hint[0] = int(c_hint.data_ptr())
+            self.context_hint.execute_async_v2(
+                bindings=self.bindings_hint,
+                stream_handle=self.stream_hint)
+            cudart.cudaStreamSynchronize(self.stream_hint)
+            memcopy_device_to_device(self.c_hint_trt.data_ptr(), self.outputs_hint[0].device, self.outputs_hint[0].nbytes)
+            c_hint = self.c_hint_trt
+        else:
+            c_hint = self.control_input_block(c_hint)
 
-        for i in range(total_steps - 1):
+        for i in range(total_steps - 2):
 
             index = total_steps - i - 1
             # t = steps[i].item()
@@ -240,10 +259,9 @@ class DDIMSampler(object):
                 self.bindings[3] = int(c_cond_txt.data_ptr())
                 self.bindings[4] = int(c_hint.data_ptr())
                 self.bindings[5] = int(u_cond_txt.data_ptr())
-                self.bindings[6] = int(u_hint.data_ptr())
-                self.bindings[7] = int(alphas[index].data_ptr())
-                self.bindings[8] = int(alphas_prev[index].data_ptr())
-                self.bindings[9] = int(sqrt_one_minus_alphas[index].data_ptr())             
+                self.bindings[6] = int(alphas[index].data_ptr())
+                self.bindings[7] = int(alphas_prev[index].data_ptr())
+                self.bindings[8] = int(sqrt_one_minus_alphas[index].data_ptr())             
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
@@ -254,11 +272,11 @@ class DDIMSampler(object):
                 img = self.out_tensor   
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
-                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
+                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")
-                # input()
-                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index])#, sigmas[index])
+                # raise
+                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
 
 
