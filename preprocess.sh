@@ -4,10 +4,13 @@ mkdir onnxs
 cd onnxs
 # trtexec --onnx=./controlnet_full.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_full_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph
 # trtexec --onnx=./controlnet_vae.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph
-trtexec --onnx=./controlnet_with_vae.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_with_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph
+trtexec --onnx=./controlnet_one_loop.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph
 # /home/player/.local/bin/polygraphy
 # mv controlnet_full_fp16.engine ../
 # mv controlnet_vae_fp16.engine ../
-mv controlnet_with_vae_fp16.engine ../
+mv controlnet_one_loop_fp16.engine ../
 cd ..
 # trtexec --onnx=./controlnet.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --saveEngine=./controlnet.engine --infStreams=4
+
+# python3 setup.py install --user
+# ninja package

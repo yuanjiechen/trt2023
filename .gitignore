@@ -149,3 +149,4 @@ dmypy.json
 *.bin
 *.jpg
 onnxs/
+test_imgs/
