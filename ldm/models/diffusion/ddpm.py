@@ -841,7 +841,7 @@ class LatentDiffusion(DDPM):
             z = self.first_stage_model.quantize.get_codebook_entry(z, shape=None)
             z = rearrange(z, 'b h w c -> b c h w').contiguous()
 
-        z = 1. / self.scale_factor * z
+        # z = 1. / self.scale_factor * z
         if self.control_net_use_trt:
             self.bindings[0] = int(z.data_ptr())
             self.context.execute_async_v2(

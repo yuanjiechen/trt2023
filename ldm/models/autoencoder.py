@@ -86,6 +86,7 @@ class AutoencoderKL(torch.nn.Module):
         return posterior
 
     def forward(self, z):
+        z = 1. / 0.18125 * z
         z = self.post_quant_conv(z)
         dec = self.decoder(z)
         return dec

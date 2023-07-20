@@ -24,6 +24,7 @@ from cuda import cuda, cudart
 import numpy as np
 from pathlib import Path
 import pickle
+import time
 import torch.nn.functional as F
 
 class ControlledUnetModel(UNetModel):
@@ -310,7 +311,7 @@ class ControlNet(nn.Module):
 
         emb = timesteps #self.step_dict[timesteps.item()]
 
-        guided_hint = self.input_hint_block(hint, emb, context)
+        guided_hint = self.input_hint_block(hint, None, None)
 
         outs = []
 

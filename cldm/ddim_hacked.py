@@ -25,9 +25,8 @@ class Control_Diff_VAE(torch.nn.Module):
     
     def forward(self, img, ts, ts_df, 
                 c_cond_txt, c_hint, u_cond_txt, u_hint, 
-                a_t, a_prev, sqrt_one_minus_at, sigma_t):
+                a_t, a_prev, sqrt_one_minus_at):
 
-        rand_noise = torch.randn(img.shape, device=self.device)
 
         model_t = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
         model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, u_hint)
@@ -37,10 +36,9 @@ class Control_Diff_VAE(torch.nn.Module):
 
         pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()
 
-        dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
-        noise = sigma_t * rand_noise 
+        dir_xt = (1. - a_prev).sqrt() * e_t
 
-        img = a_prev.sqrt() * pred_x0 + dir_xt + noise
+        img = a_prev.sqrt() * pred_x0 + dir_xt
 
         # img = 1. / 0.18215 * img
         # img = self.vae_model(img)
@@ -195,7 +193,7 @@ class DDIMSampler(object):
         alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
         alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]) #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
         sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
-        sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
+        #sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
         ##########
 
         if x_T is None:
@@ -203,7 +201,7 @@ class DDIMSampler(object):
         else:
             img = x_T
 
-        rand_noise = torch.randn(img.shape, device=device)
+        #rand_noise = torch.randn(img.shape, device=device)
         if timesteps is None:
             timesteps = self.ddpm_num_timesteps if ddim_use_original_steps else self.ddim_timesteps
         elif timesteps is not None and not ddim_use_original_steps:
@@ -211,10 +209,10 @@ class DDIMSampler(object):
             timesteps = self.ddim_timesteps[:subset_end]
 
         #intermediates = {'x_inter': [img], 'pred_x0': [img]}
-        time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
+        #time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
         total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
 
-        steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
+        #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
         c_cond_txt = torch.cat(cond['c_crossattn'], 1)
@@ -225,16 +223,6 @@ class DDIMSampler(object):
         u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         # u_conds = [u_cond_txt, u_hint]
         ############
-        
-        ############# torch full model
-        # contorl_model_steps = torch.stack(self.model.control_model.step_dict, dim=0).cuda()
-        # diff_model_steps = torch.stack(self.model.model.diffusion_model.step_dict, dim=0).cuda()
-
-
-        # img = self.full_model(img, contorl_model_steps, diff_model_steps, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas, alphas_prev, sqrt_one_minus_alphas, sigmas)
-        # return img
-    
-        #############
 
         for i in range(total_steps - 1):
 
@@ -255,8 +243,7 @@ class DDIMSampler(object):
                 self.bindings[6] = int(u_hint.data_ptr())
                 self.bindings[7] = int(alphas[index].data_ptr())
                 self.bindings[8] = int(alphas_prev[index].data_ptr())
-                self.bindings[9] = int(sqrt_one_minus_alphas[index].data_ptr())      
-                self.bindings[10] = int(sigmas[index].data_ptr())              
+                self.bindings[9] = int(sqrt_one_minus_alphas[index].data_ptr())             
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
@@ -267,25 +254,13 @@ class DDIMSampler(object):
                 img = self.out_tensor   
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
-                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]], f)
+                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")
                 # input()
-                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index])
+                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
-            # e_t = model_output
 
-            # a_t = alphas[index]
-            # a_prev = alphas_prev[index]
-            # sigma_t = sigmas[index] 
-            # sqrt_one_minus_at = sqrt_one_minus_alphas[index]
-
-            # pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()
-
-            # dir_xt = (1. - a_prev - sigma_t**2).sqrt() * e_t
-            # noise = sigma_t * rand_noise 
-
-            # img = a_prev.sqrt() * pred_x0 + dir_xt + noise
 
             ################ orig func call
                 # outs = self.p_sample_ddim(img, conds, ts_all, index=index, use_original_steps=ddim_use_original_steps,
