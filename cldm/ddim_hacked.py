@@ -68,7 +68,7 @@ class DDIMSampler(object):
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block)
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = True
+        else: self.control_net_use_trt = False
         if self.control_net_use_trt:
 
             logger = trt.Logger(trt.Logger.INFO)
@@ -273,6 +273,7 @@ class DDIMSampler(object):
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
                 #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
+                # raise
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")
                 # raise
