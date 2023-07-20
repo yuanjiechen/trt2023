@@ -272,9 +272,6 @@ class DDIMSampler(object):
                 # print("end")
                 # input()
                 img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index])
-                # model_t = self.model(img, ts, ts_df, c_cond_txt, c_hint)
-                # model_uncond = self.model(img, ts, ts_df, u_cond_txt, u_hint)
-                # model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
             #########################
             # e_t = model_output
 
