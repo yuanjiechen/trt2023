@@ -587,7 +587,7 @@ class LatentDiffusion(DDPM):
 
         device = torch.device("cuda")
         if not Path("controlnet_vae_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
         if self.control_net_use_trt:
 
             logger = trt.Logger(trt.Logger.INFO)
