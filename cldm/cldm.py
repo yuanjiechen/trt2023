@@ -32,7 +32,7 @@ class ControlledUnetModel(UNetModel):
         step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values]
-            self.step_dict = dict(zip(step_keys, step_embed))
+            self.step_dict = step_embed #dict(zip(step_keys, step_embed))
     def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
         j = len(control) - 1
@@ -299,7 +299,7 @@ class ControlNet(nn.Module):
         step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values]
-            self.step_dict = dict(zip(step_keys, step_embed))
+            self.step_dict = step_embed #dict(zip(step_keys, step_embed))
 
     def make_zero_conv(self, channels):
         return TimestepEmbedSequential(zero_module(conv_nd(self.dims, channels, channels, 1, padding=0)))

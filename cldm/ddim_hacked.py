@@ -236,12 +236,12 @@ class DDIMSampler(object):
     
         #############
 
-        for i in range(total_steps):
+        for i in range(total_steps - 1):
 
             index = total_steps - i - 1
             # t = steps[i].item()
-            ts = self.model.control_model.step_dict[steps[i].item()] 
-            ts_df = self.model.model.diffusion_model.step_dict[steps[i].item()]
+            ts = self.model.control_model.step_dict[i] #steps[i].item()
+            ts_df = self.model.model.diffusion_model.step_dict[i] #steps[i].item()
             # ts_all = [t, ts, ts_df]
 
             if self.control_net_use_trt:
