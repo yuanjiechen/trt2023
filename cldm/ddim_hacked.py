@@ -27,7 +27,7 @@ class Control_Diff_VAE(torch.nn.Module):
                 c_cond_txt, c_hint, u_cond_txt, 
                 a_t, a_prev, sqrt_one_minus_at):
 
-        noise = torch.randn(img.shape, device=self.device)
+        # noise = torch.randn(img.shape, device=self.device)
         model_t = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
         model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, c_hint)
         model_output = model_uncond + 9 * (model_t - model_uncond)
@@ -38,7 +38,7 @@ class Control_Diff_VAE(torch.nn.Module):
 
         dir_xt = (1. - a_prev).sqrt() * e_t
 
-        img = a_prev.sqrt() * pred_x0 + dir_xt + 0.006 * noise
+        img = a_prev.sqrt() * pred_x0 + dir_xt #+ 0.006 * noise
 
         # img = 1. / 0.18215 * img
         # img = self.vae_model(img)
@@ -243,7 +243,7 @@ class DDIMSampler(object):
         else:
             c_hint = self.control_input_block(c_hint)
 
-        for i in range(total_steps - 2):
+        for i in range(total_steps - 1):
 
             index = total_steps - i - 1
             # t = steps[i].item()
