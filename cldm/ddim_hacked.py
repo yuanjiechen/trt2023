@@ -48,15 +48,17 @@ class Control_Diff_VAE(torch.nn.Module):
         return img #, intermediates
 
 class Control_input_block(torch.nn.Module):
-    def __init__(self, input_block) -> None:
+    def __init__(self, input_block, transformer) -> None:
         super().__init__()
         self.input_block = input_block
-        self.transformer = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").cuda().eval()
+        self.transformer = transformer #CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").cuda().eval()
 
     def forward(self, c_hint, c_cond_txt, u_cond_txt):
-        return self.input_block(c_hint, None), \
-               self.transformer(input_ids=c_cond_txt).last_hidden_state, \
-               self.transformer(input_ids=u_cond_txt).last_hidden_state
+        c_hint_out = self.input_block(c_hint, None)
+        c_cond_out = self.transformer(input_ids=c_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
+        u_cond_out = self.transformer(input_ids=u_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
+
+        return c_hint_out, c_cond_out, u_cond_out
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -70,7 +72,7 @@ class DDIMSampler(object):
 
         self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
         self.full_model = Control_Diff_VAE(self.model)
-        self.control_input_block = Control_input_block(self.model.control_model.input_hint_block)
+        self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
@@ -231,10 +233,11 @@ class DDIMSampler(object):
         #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
-        c_cond_txt = torch.cat([cond['c_crossattn']], 1)
+        c_cond_txt = torch.cat([cond['c_crossattn']], 1).to(torch.int32)
         c_hint = torch.cat([cond['c_concat']], 1)
 
-        u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1)
+        u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1).to(torch.int32)
+        # print(c_cond_txt, u_cond_txt)
         # u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         ############
         # with open("hint_block.pkl", "wb+") as f:
