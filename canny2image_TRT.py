@@ -22,8 +22,8 @@ class hackathon():
     def initialize(self):
         self.apply_canny = CannyDetector()
         self.model = create_model('./models/cldm_v15.yaml').cpu()
-        self.model.load_state_dict(load_state_dict('./models/control_sd15_canny.pth', location='cuda'))
-        # self.model.load_state_dict(load_state_dict('/home/player/ControlNet/models/control_sd15_canny.pth', location='cuda'))
+        # self.model.load_state_dict(load_state_dict('./models/control_sd15_canny.pth', location='cuda'))
+        self.model.load_state_dict(load_state_dict('/home/player/ControlNet/models/control_sd15_canny.pth', location='cuda'))
         self.model = self.model.cuda()
         self.ddim_sampler = DDIMSampler(self.model)
 
@@ -50,8 +50,8 @@ class hackathon():
             if config.save_memory:
                 self.model.low_vram_shift(is_diffusing=False)
 
-            cond = {"c_concat": [control], "c_crossattn": [self.model.get_learned_conditioning([prompt + ', ' + a_prompt] * num_samples)]}
-            un_cond = {"c_concat": None if guess_mode else [control], "c_crossattn": [self.model.get_learned_conditioning([n_prompt] * num_samples)]}
+            cond = {"c_concat": control, "c_crossattn": self.model.get_learned_conditioning([prompt + ', ' + a_prompt])}# * num_samples
+            un_cond = {"c_concat": None if guess_mode else control, "c_crossattn": self.model.get_learned_conditioning([n_prompt])}# * num_samples
             shape = (4, H // 8, W // 8)
 
             if config.save_memory:

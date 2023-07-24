@@ -14,6 +14,8 @@ from common import allocate_buffers, memcpy_device_to_host, memcpy_host_to_devic
 import pickle
 import time
 
+from transformers import CLIPTextModel
+
 class Control_Diff_VAE(torch.nn.Module):
     def __init__(self, control_model):
         super().__init__()
@@ -49,9 +51,12 @@ class Control_input_block(torch.nn.Module):
     def __init__(self, input_block) -> None:
         super().__init__()
         self.input_block = input_block
+        self.transformer = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").cuda().eval()
 
-    def forward(self, c_hint):
-        return self.input_block(c_hint, None)#, self.input_block(u_hint, None)
+    def forward(self, c_hint, c_cond_txt, u_cond_txt):
+        return self.input_block(c_hint, None), \
+               self.transformer(input_ids=c_cond_txt).last_hidden_state, \
+               self.transformer(input_ids=u_cond_txt).last_hidden_state
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -84,6 +89,8 @@ class DDIMSampler(object):
                 self.context_hint = model_hint.create_execution_context()
                 self.inputs_hint, self.outputs_hint, self.bindings_hint, self.stream_hint = allocate_buffers(model_hint)
                 self.c_hint_trt = torch.zeros([1, 320, 32, 48], dtype=torch.float32, device=self.device)
+                self.c_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
+                self.u_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -224,24 +231,31 @@ class DDIMSampler(object):
         #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
-        c_cond_txt = torch.cat(cond['c_crossattn'], 1)
-        c_hint = torch.cat(cond['c_concat'], 1)
+        c_cond_txt = torch.cat([cond['c_crossattn']], 1)
+        c_hint = torch.cat([cond['c_concat']], 1)
 
-        u_cond_txt = torch.cat(unconditional_conditioning['c_crossattn'], 1)
-        u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
+        u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1)
+        # u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         ############
         # with open("hint_block.pkl", "wb+") as f:
-        #     pickle.dump([c_hint], f)
+        #     pickle.dump([c_hint, c_cond_txt, u_cond_txt], f)
+        #     raise
         if self.control_net_use_trt:
             self.bindings_hint[0] = int(c_hint.data_ptr())
+            self.bindings_hint[1] = int(c_cond_txt.data_ptr())
+            self.bindings_hint[2] = int(u_cond_txt.data_ptr())
             self.context_hint.execute_async_v2(
                 bindings=self.bindings_hint,
                 stream_handle=self.stream_hint)
             cudart.cudaStreamSynchronize(self.stream_hint)
             memcopy_device_to_device(self.c_hint_trt.data_ptr(), self.outputs_hint[0].device, self.outputs_hint[0].nbytes)
+            memcopy_device_to_device(self.c_cond_txt_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
+            memcopy_device_to_device(self.u_cond_txt_trt.data_ptr(), self.outputs_hint[2].device, self.outputs_hint[2].nbytes)
             c_hint = self.c_hint_trt
+            c_cond_txt = self.c_cond_txt_trt
+            u_cond_txt = self.u_cond_txt_trt
         else:
-            c_hint = self.control_input_block(c_hint)
+            c_hint, c_cond_txt, u_cond_txt = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
 
         for i in range(total_steps - 1):
 
