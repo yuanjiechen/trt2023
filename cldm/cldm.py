@@ -41,7 +41,7 @@ class ControlledUnetModel(UNetModel):
             # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             # emb = self.time_embed(t_emb)
             emb = timesteps #self.step_dict[timesteps.item()]
-            h = x.type(self.dtype)
+            h = x#.type(self.dtype)
             for module in self.input_blocks:
                 h = module(h, emb, context)
                 hs.append(h)
@@ -58,7 +58,7 @@ class ControlledUnetModel(UNetModel):
                 j -= 1
             h = module(h, emb, context)
 
-        h = h.type(x.dtype)
+        # h = h.type(x.dtype)
         return self.out(h)
 
 
@@ -315,7 +315,7 @@ class ControlNet(nn.Module):
 
         outs = []
 
-        h = x.type(self.dtype)
+        h = x#.type(self.dtype)
         for module, zero_conv in zip(self.input_blocks, self.zero_convs):
             if guided_hint is not None:
                 h = module(h, emb, context)
@@ -323,7 +323,7 @@ class ControlNet(nn.Module):
                 guided_hint = None
             else:
                 h = module(h, emb, context)
-            outs.append(zero_conv(h, emb, context))
+            #outs.append(zero_conv(h, emb, context))
 
         h = self.middle_block(h, emb, context)
         outs.append(self.middle_block_out(h, emb, context))
@@ -400,7 +400,7 @@ class ControlLDM(LatentDiffusion):
         # for i, c in enumerate(self.control_scales):
         #     self.mid_tensors[i].mul_(c)
         # control = [c * scale for c, scale in zip(control, self.control_scales)]
-        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=True)#self.only_mid_control)
 
         return eps
 
