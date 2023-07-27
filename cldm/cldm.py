@@ -41,27 +41,38 @@ class ControlledUnetModel(UNetModel):
 
             emb = timesteps #self.step_dict[timesteps.item()]
             h = x
+            # for i, module in enumerate(self.input_blocks):
+            #     if memory_x is None:
+            #         if i == 1:
+            #             h, return_memory_x, x_in = module(h, emb, context)
+            #         else:
+            #             h, _, _ = module(h, emb, context)
+            #         hs.append(h)
+
+            #     else:
+            #         if i == 1: 
+            #             h = x_in
+            #             h, return_memory_x, x_in = module(h, emb, context, memory_x)
+            #             memory_x = None
+            #         elif i > 1:
+            #             h, _, _ = module(h, emb, context)
+            #         hs.append(h)
+            #####################
+
+
             for i, module in enumerate(self.input_blocks):
-                if memory_x is None:
-                    if i == 1:
-                        h, return_memory_x, x_in = module(h, emb, context)
-                    else:
-                        h, _, _ = module(h, emb, context)
-                    hs.append(h)
-
+                if i == 0:
+                    if memory_x is None: h, _, _ = module(h, emb, context)
+                elif i == 1:
+                    if memory_x is not None: h = x_in
+                    h, return_memory_x, x_in = module(h, emb, context, memory_x)
+                    memory_x = None
                 else:
-                    if i == 0: 
-                        h, _, _ = module(h, emb, context) ##########
-                        # hs.append((h))
-                        # continue
-                    elif i == 1: 
-                        h = x_in
-                        h, return_memory_x, x_in = module(h, emb, context, memory_x)
-                        memory_x = None
-                    else:
-                        h, _, _ = module(h, emb, context)
-                    hs.append(h)
+                    h, _, _ = module(h, emb, context)
+                hs.append(h)
 
+
+            h0 = hs[0]
             h, _, _ = self.middle_block(h, emb, context)
         if control is not None:
             h += control[j]#.pop()
@@ -75,7 +86,7 @@ class ControlledUnetModel(UNetModel):
                 j -= 1
             h, _, _ = module(h, emb, context)
 
-        return self.out(h), return_memory_x, x_in
+        return self.out(h), return_memory_x, x_in, h0
 
 
 class ControlNet(nn.Module):
@@ -367,7 +378,6 @@ class ControlLDM(LatentDiffusion):
         self.control_key = control_key
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
-        self.control0 = None
 
         # if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
         # else: self.control_net_use_trt = False
@@ -400,10 +410,10 @@ class ControlLDM(LatentDiffusion):
     def forward(self, x_noisy, ts, ts_df, cond_txt, u_cond_txt, hint):#, *args, **kwargs
 
         control, return_memory_x, x_in = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
-        eps, return_memory_x_df, x_in_df = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+        eps, return_memory_x_df, x_in_df, h0 = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
         control, _, _ = self.control_model(x=control[0], hint=hint, timesteps=ts, context=u_cond_txt, memory_x=return_memory_x, x_in=x_in)
-        eps_uncond, _, _ = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=u_cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=return_memory_x_df, x_in=x_in_df)
+        eps_uncond, _, _, _ = self.model.diffusion_model(x=h0, timesteps=ts_df, context=u_cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=return_memory_x_df, x_in=x_in_df)
 
         return eps, eps_uncond
 
