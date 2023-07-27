@@ -34,17 +34,34 @@ class ControlledUnetModel(UNetModel):
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values]
             self.step_dict = step_embed #dict(zip(step_keys, step_embed))
-    def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
+    def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, memory_x=None, x_in=None, **kwargs):
         hs = []
         j = len(control) - 1
         with torch.no_grad():
-            # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-            # emb = self.time_embed(t_emb)
+
             emb = timesteps #self.step_dict[timesteps.item()]
             h = x
-            for module in self.input_blocks:
-                h, _, _ = module(h, emb, context)
-                hs.append(h)
+            for i, module in enumerate(self.input_blocks):
+                if memory_x is None:
+                    if i == 1:
+                        h, return_memory_x, x_in = module(h, emb, context)
+                    else:
+                        h, _, _ = module(h, emb, context)
+                    hs.append(h)
+
+                else:
+                    if i == 0: 
+                        h, _, _ = module(h, emb, context) ##########
+                        # hs.append((h))
+                        # continue
+                    elif i == 1: 
+                        h = x_in
+                        h, return_memory_x, x_in = module(h, emb, context, memory_x)
+                        memory_x = None
+                    else:
+                        h, _, _ = module(h, emb, context)
+                    hs.append(h)
+
             h, _, _ = self.middle_block(h, emb, context)
         if control is not None:
             h += control[j]#.pop()
@@ -58,7 +75,7 @@ class ControlledUnetModel(UNetModel):
                 j -= 1
             h, _, _ = module(h, emb, context)
 
-        return self.out(h)
+        return self.out(h), return_memory_x, x_in
 
 
 class ControlNet(nn.Module):
@@ -380,8 +397,9 @@ class ControlLDM(LatentDiffusion):
         return x, dict(c_crossattn=[c], c_concat=[control])
 
     @torch.no_grad()
-    def forward(self, x_noisy, ts, ts_df, cond_txt, hint, memory_x=None, x_in=None):#, *args, **kwargs
+    def forward(self, x_noisy, ts, ts_df, cond_txt, hint, memory_x=None, x_in=None, memory_x_df=None, x_in_df=None):#, *args, **kwargs
         return_memory_x = None
+        return_memory_x_df = None
         # assert isinstance(cond, dict)
         # # diffusion_model = self.model.diffusion_model
         # cond_txt = torch.cat(cond['c_crossattn'], 1)
@@ -416,9 +434,11 @@ class ControlLDM(LatentDiffusion):
         # for i, c in enumerate(self.control_scales):
         #     self.mid_tensors[i].mul_(c)
         # control = [c * scale for c, scale in zip(control, self.control_scales)]
-        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
-
-        return eps, return_memory_x, x_in
+        if memory_x_df is None:
+            eps, return_memory_x_df, x_in_df = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+        else:
+            eps, _, _ = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=memory_x_df, x_in=x_in_df)
+        return eps, return_memory_x, x_in, return_memory_x_df, x_in_df
 
     @torch.no_grad()
     def get_unconditional_conditioning(self, N):

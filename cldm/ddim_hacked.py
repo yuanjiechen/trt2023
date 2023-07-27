@@ -30,8 +30,8 @@ class Control_Diff_VAE(torch.nn.Module):
                 a_t, a_prev, sqrt_one_minus_at):
 
         # noise = torch.randn(img.shape, device=self.device)
-        model_t, return_memory_x, x_in = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        model_uncond, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in)
+        model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
+        model_uncond, _, _, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in, return_memory_x_df, x_in_df)
         model_output = model_uncond + 9 * (model_t - model_uncond)
         #########################
         e_t = model_output
@@ -75,7 +75,7 @@ class DDIMSampler(object):
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = True
+        else: self.control_net_use_trt = False
         if self.control_net_use_trt:
 
             logger = trt.Logger(trt.Logger.INFO)
