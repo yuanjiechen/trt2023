@@ -75,7 +75,7 @@ class DDIMSampler(object):
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
         if self.control_net_use_trt:
 
             logger = trt.Logger(trt.Logger.INFO)
