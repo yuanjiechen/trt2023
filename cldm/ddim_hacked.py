@@ -30,8 +30,8 @@ class Control_Diff_VAE(torch.nn.Module):
                 a_t, a_prev, sqrt_one_minus_at):
 
         # noise = torch.randn(img.shape, device=self.device)
-        model_t = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        model_uncond = self.control_model(img, ts, ts_df, u_cond_txt, c_hint)
+        model_t, return_memory_x, x_in = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
+        model_uncond, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in)
         model_output = model_uncond + 9 * (model_t - model_uncond)
         #########################
         e_t = model_output
@@ -54,7 +54,7 @@ class Control_input_block(torch.nn.Module):
         self.transformer = transformer #CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").cuda().eval()
 
     def forward(self, c_hint, c_cond_txt, u_cond_txt):
-        c_hint_out = self.input_block(c_hint, None)
+        c_hint_out, _, _ = self.input_block(c_hint, None)
         c_cond_out = self.transformer(input_ids=c_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
         u_cond_out = self.transformer(input_ids=u_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
 

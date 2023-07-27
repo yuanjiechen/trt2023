@@ -41,11 +41,11 @@ class ControlledUnetModel(UNetModel):
             # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             # emb = self.time_embed(t_emb)
             emb = timesteps #self.step_dict[timesteps.item()]
-            h = x#.type(self.dtype)
+            h = x
             for module in self.input_blocks:
-                h = module(h, emb, context)
+                h, _, _ = module(h, emb, context)
                 hs.append(h)
-            h = self.middle_block(h, emb, context)
+            h, _, _ = self.middle_block(h, emb, context)
         if control is not None:
             h += control[j]#.pop()
             j -= 1
@@ -56,9 +56,8 @@ class ControlledUnetModel(UNetModel):
             else:
                 h = torch.cat([h, hs.pop() + control[j]], dim=1)
                 j -= 1
-            h = module(h, emb, context)
+            h, _, _ = module(h, emb, context)
 
-        # h = h.type(x.dtype)
         return self.out(h)
 
 
@@ -305,7 +304,7 @@ class ControlNet(nn.Module):
     def make_zero_conv(self, channels):
         return TimestepEmbedSequential(zero_module(conv_nd(self.dims, channels, channels, 1, padding=0)))
 
-    def forward(self, x, hint, timesteps, context, **kwargs):
+    def forward(self, x, hint, timesteps, context, memory_x=None, x_in=None, **kwargs): # context 1, 77, 768
         # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
         # emb = self.time_embed(t_emb)
 
@@ -316,19 +315,31 @@ class ControlNet(nn.Module):
         outs = []
 
         h = x#.type(self.dtype)
-        for module, zero_conv in zip(self.input_blocks, self.zero_convs):
-            if guided_hint is not None:
-                h = module(h, emb, context)
-                h += guided_hint
-                guided_hint = None
+        for i, (module, zero_conv) in enumerate(zip(self.input_blocks, self.zero_convs)):
+            if i == 0:
+                if memory_x is not None:
+                    outs.append(h)
+                    guided_hint = None
+                    continue
+                else:
+                    h, _, _ = module(h, emb, context)
+                    h += guided_hint
+                    guided_hint = None
+            
+            elif i == 1:
+                if memory_x is not None: h = x_in
+                h, return_memory_x, x_in = module(h, emb, context, memory_x)
+                memory_x = None
             else:
-                h = module(h, emb, context)
-            #outs.append(zero_conv(h, emb, context))
+                h, _, _ = module(h, emb, context)
+            
+            outs.append(zero_conv(h, emb, context)[0])
 
-        h = self.middle_block(h, emb, context)
-        outs.append(self.middle_block_out(h, emb, context))
 
-        return outs
+        h, _, _ = self.middle_block(h, emb, context)
+        outs.append(self.middle_block_out(h, emb, context)[0])
+
+        return outs, return_memory_x, x_in
 
 
 class ControlLDM(LatentDiffusion):
@@ -339,6 +350,7 @@ class ControlLDM(LatentDiffusion):
         self.control_key = control_key
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
+        self.control0 = None
 
         # if not Path("controlnet_fp16.engine").exists(): self.control_net_use_trt = False
         # else: self.control_net_use_trt = False
@@ -368,8 +380,8 @@ class ControlLDM(LatentDiffusion):
         return x, dict(c_crossattn=[c], c_concat=[control])
 
     @torch.no_grad()
-    def forward(self, x_noisy, ts, ts_df, cond_txt, hint):#, *args, **kwargs
-
+    def forward(self, x_noisy, ts, ts_df, cond_txt, hint, memory_x=None, x_in=None):#, *args, **kwargs
+        return_memory_x = None
         # assert isinstance(cond, dict)
         # # diffusion_model = self.model.diffusion_model
         # cond_txt = torch.cat(cond['c_crossattn'], 1)
@@ -395,14 +407,18 @@ class ControlLDM(LatentDiffusion):
             #     cudart.cudaStreamSynchronize(self.stream)
             #     for out, mid_out in zip(self.outputs, self.mid_tensors):
             #         memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
+        if memory_x is None:
+            control, return_memory_x, x_in = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
+            self.control0 = control[0]
+        else:
+            control, _, _ = self.control_model(x=self.control0, hint=hint, timesteps=ts, context=cond_txt, memory_x=memory_x, x_in=x_in)
 
-        control = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
         # for i, c in enumerate(self.control_scales):
         #     self.mid_tensors[i].mul_(c)
         # control = [c * scale for c, scale in zip(control, self.control_scales)]
-        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=True)#self.only_mid_control)
+        eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
-        return eps
+        return eps, return_memory_x, x_in
 
     @torch.no_grad()
     def get_unconditional_conditioning(self, N):

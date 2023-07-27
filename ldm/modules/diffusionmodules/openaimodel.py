@@ -76,15 +76,17 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, emb, context=None):
+    def forward(self, x, emb, context=None, memory_x=None):
+        return_memory_x = None
+        x_in = None
         for layer in self:
-            if isinstance(layer, TimestepBlock):
-                x = layer(x, emb)
+            if isinstance(layer, TimestepBlock): # Resnet
+                if memory_x is None: x = layer(x, emb)
             elif isinstance(layer, SpatialTransformer):
-                x = layer(x, context)
+                x, return_memory_x, x_in = layer(x, context, memory_x)
             else:
-                x = layer(x)
-        return x
+                if memory_x is None: x = layer(x) # COnv
+        return x, return_memory_x, x_in
 
 
 class Upsample(nn.Module):

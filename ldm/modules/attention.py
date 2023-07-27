@@ -157,7 +157,7 @@ class CrossAttention(nn.Module):
 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, query_dim),
-            nn.Dropout(dropout)
+            # nn.Dropout(dropout)
         )
 
     def forward(self, x, context=None, mask=None):
@@ -265,14 +265,21 @@ class BasicTransformerBlock(nn.Module):
         self.norm3 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
-    def forward(self, x, context=None):
-        return checkpoint(self._forward, (x, context), self.parameters(), False)#self.checkpoint)
+    # def forward(self, x, context=None):
+    #     return checkpoint(self._forward, (x, context), self.parameters(), False)#self.checkpoint)
 
-    def _forward(self, x, context=None):
-        x = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x
-        x = self.attn2(self.norm2(x), context=context) + x
+    def forward(self, x, context=None, memory_x=None):
+        if memory_x is not None: 
+            y = memory_x
+        else:
+            y = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x
+        x = self.attn2(self.norm2(y), context=context) + y
         x = self.ff(self.norm3(x)) + x
-        return x
+
+        if memory_x is not None: 
+            return x, None
+        else: 
+            return x, y
 
 
 class SpatialTransformer(nn.Module):
@@ -318,24 +325,26 @@ class SpatialTransformer(nn.Module):
             self.proj_out = zero_module(nn.Linear(in_channels, inner_dim))
         self.use_linear = use_linear
 
-    def forward(self, x, context=None):
+    def forward(self, x, context=None, memory_x=None):
         # note: if no context is given, cross-attention defaults to self-attention
         if not isinstance(context, list):
             context = [context]
         b, c, h, w = x.shape
+
         x_in = x
-        x = self.norm(x)
-        if not self.use_linear:
+        if memory_x is None: x = self.norm(x)
+        if not self.use_linear and memory_x is None:
             x = self.proj_in(x)
         x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
-        if self.use_linear:
+        if self.use_linear and memory_x is None:
             x = self.proj_in(x)
         for i, block in enumerate(self.transformer_blocks):
-            x = block(x, context=context[i])
+            x, return_memory_x = block(x, context=context[i], memory_x=memory_x)
         if self.use_linear:
             x = self.proj_out(x)
         x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
         if not self.use_linear:
             x = self.proj_out(x)
-        return x + x_in
+
+        return x + x_in, return_memory_x, x_in
 
