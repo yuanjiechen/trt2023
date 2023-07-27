@@ -29,11 +29,14 @@ class Control_Diff_VAE(torch.nn.Module):
                 c_cond_txt, c_hint, u_cond_txt, 
                 a_t, a_prev, sqrt_one_minus_at):
 
-        # noise = torch.randn(img.shape, device=self.device)
-        model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        model_uncond, _, _, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in, return_memory_x_df, x_in_df)
-        model_output = model_uncond + 9 * (model_t - model_uncond)
+        # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
+        # model_uncond, _, _, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in, return_memory_x_df, x_in_df)
+        # model_output = model_uncond + 9 * (model_t - model_uncond)
         #########################
+        # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
+        model_t, model_uncond = self.control_model(img, ts, ts_df, c_cond_txt, u_cond_txt, c_hint)
+        model_output = model_uncond + 9 * (model_t - model_uncond)
+
         e_t = model_output
 
         pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()

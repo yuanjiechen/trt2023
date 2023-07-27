@@ -397,48 +397,15 @@ class ControlLDM(LatentDiffusion):
         return x, dict(c_crossattn=[c], c_concat=[control])
 
     @torch.no_grad()
-    def forward(self, x_noisy, ts, ts_df, cond_txt, hint, memory_x=None, x_in=None, memory_x_df=None, x_in_df=None):#, *args, **kwargs
-        return_memory_x = None
-        return_memory_x_df = None
-        # assert isinstance(cond, dict)
-        # # diffusion_model = self.model.diffusion_model
-        # cond_txt = torch.cat(cond['c_crossattn'], 1)
-        # hint = torch.cat(cond['c_concat'], 1)
-        # if cond['c_concat'] is None:
-        #     eps = self.model.diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=None, only_mid_control=self.only_mid_control)
-        # else:
-            # torch.onnx.export(self.control_model.eval(), (x_noisy, torch.cat(cond['c_concat'], 1), t, cond_txt), "./controlnet.onnx", opset_version=17, do_constant_folding=True)
-            # raise
-            # with open("controlnet.pkl", "wb+") as f:
-            #     pickle.dump([x_noisy.cpu(), hint.cpu(), t.cpu(), cond_txt.cpu()], f)
-            # raise
+    def forward(self, x_noisy, ts, ts_df, cond_txt, u_cond_txt, hint):#, *args, **kwargs
 
-            # if self.control_net_use_trt:
-            #     self.bindings[0] = int(x_noisy.data_ptr())
-            #     self.bindings[1] = int(hint.data_ptr())
-            #     self.bindings[2] = int(t.data_ptr())
-            #     self.bindings[3] = int(cond_txt.data_ptr())
-            #     # self.context.execute_v2(self.bindings)
-            #     self.context.execute_async_v2(
-            #         bindings=self.bindings,
-            #         stream_handle=self.stream)
-            #     cudart.cudaStreamSynchronize(self.stream)
-            #     for out, mid_out in zip(self.outputs, self.mid_tensors):
-            #         memcopy_device_to_device(mid_out.data_ptr(), out.device, out.nbytes)
-        if memory_x is None:
-            control, return_memory_x, x_in = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
-            self.control0 = control[0]
-        else:
-            control, _, _ = self.control_model(x=self.control0, hint=hint, timesteps=ts, context=cond_txt, memory_x=memory_x, x_in=x_in)
+        control, return_memory_x, x_in = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
+        eps, return_memory_x_df, x_in_df = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
-        # for i, c in enumerate(self.control_scales):
-        #     self.mid_tensors[i].mul_(c)
-        # control = [c * scale for c, scale in zip(control, self.control_scales)]
-        if memory_x_df is None:
-            eps, return_memory_x_df, x_in_df = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
-        else:
-            eps, _, _ = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=memory_x_df, x_in=x_in_df)
-        return eps, return_memory_x, x_in, return_memory_x_df, x_in_df
+        control, _, _ = self.control_model(x=control[0], hint=hint, timesteps=ts, context=u_cond_txt, memory_x=return_memory_x, x_in=x_in)
+        eps_uncond, _, _ = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=u_cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=return_memory_x_df, x_in=x_in_df)
+
+        return eps, eps_uncond
 
     @torch.no_grad()
     def get_unconditional_conditioning(self, N):
