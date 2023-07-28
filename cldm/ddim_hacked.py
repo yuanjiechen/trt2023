@@ -15,7 +15,7 @@ import pickle
 import time
 
 from transformers import CLIPTextModel
-
+from ldm.modules.diffusionmodules.openaimodel import ResBlock
 class Control_Diff_VAE(torch.nn.Module):
     def __init__(self, control_model):
         super().__init__()
@@ -223,15 +223,15 @@ class DDIMSampler(object):
             img = x_T
 
         #rand_noise = torch.randn(img.shape, device=device)
-        if timesteps is None:
-            timesteps = self.ddpm_num_timesteps if ddim_use_original_steps else self.ddim_timesteps
-        elif timesteps is not None and not ddim_use_original_steps:
-            subset_end = int(min(timesteps / self.ddim_timesteps.shape[0], 1) * self.ddim_timesteps.shape[0]) - 1
-            timesteps = self.ddim_timesteps[:subset_end]
+        # if timesteps is None:
+        #     timesteps = self.ddpm_num_timesteps if ddim_use_original_steps else self.ddim_timesteps
+        # elif timesteps is not None and not ddim_use_original_steps:
+        #     subset_end = int(min(timesteps / self.ddim_timesteps.shape[0], 1) * self.ddim_timesteps.shape[0]) - 1
+        #     timesteps = self.ddim_timesteps[:subset_end]
 
         #intermediates = {'x_inter': [img], 'pred_x0': [img]}
         #time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
-        total_steps = timesteps if ddim_use_original_steps else timesteps.shape[0]
+        total_steps = 20 #timesteps if ddim_use_original_steps else timesteps.shape[0]
 
         #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
@@ -288,7 +288,7 @@ class DDIMSampler(object):
                 cudart.cudaStreamSynchronize(self.stream)
                 
                 memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
-
+                #      output -> input
                 img = self.out_tensor   
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
