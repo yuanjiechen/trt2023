@@ -76,7 +76,8 @@ class DDIMSampler(object):
         self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
         self.full_model = Control_Diff_VAE(self.model)
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
-
+        # print(self.model.control_model)
+        # raise
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
         if self.control_net_use_trt:
@@ -211,16 +212,15 @@ class DDIMSampler(object):
         device = self.model.betas.device
         # b = shape[0]
         ########## Create tensor only once not 20 times !!!!!   
-        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
-        alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]) #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
-        sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
+        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
+        alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]).contiguous() #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
+        sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
         #sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
         ##########
 
-        if x_T is None:
-            img = torch.randn(shape, device=device)
-        else:
-            img = x_T
+
+        img = torch.randn(shape, device=device)
+
 
         #rand_noise = torch.randn(img.shape, device=device)
         # if timesteps is None:
@@ -257,9 +257,9 @@ class DDIMSampler(object):
             memcopy_device_to_device(self.c_hint_trt.data_ptr(), self.outputs_hint[0].device, self.outputs_hint[0].nbytes)
             memcopy_device_to_device(self.c_cond_txt_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
             memcopy_device_to_device(self.u_cond_txt_trt.data_ptr(), self.outputs_hint[2].device, self.outputs_hint[2].nbytes)
-            c_hint = self.c_hint_trt
-            c_cond_txt = self.c_cond_txt_trt
-            u_cond_txt = self.u_cond_txt_trt
+            c_hint = self.c_hint_trt.contiguous()
+            c_cond_txt = self.c_cond_txt_trt.contiguous()
+            u_cond_txt = self.u_cond_txt_trt.contiguous()
         else:
             c_hint, c_cond_txt, u_cond_txt = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
 
@@ -269,11 +269,10 @@ class DDIMSampler(object):
             # t = steps[i].item()
             ts = self.model.control_model.step_dict[i] #steps[i].item()
             ts_df = self.model.model.diffusion_model.step_dict[i] #steps[i].item()
-            # ts_all = [t, ts, ts_df]
 
             if self.control_net_use_trt:
-
-                self.bindings[0] = int(img.data_ptr())
+                if i == 0: self.bindings[0] = int(img.data_ptr())
+                else: self.bindings[0] = int(self.outputs[0].device)
                 self.bindings[1] = int(ts.data_ptr())
                 self.bindings[2] = int(ts_df.data_ptr())
                 self.bindings[3] = int(c_cond_txt.data_ptr())
@@ -287,9 +286,9 @@ class DDIMSampler(object):
                     stream_handle=self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
                 
-                memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
-                #      output -> input
-                img = self.out_tensor   
+                # memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+                # #      output -> input
+                # img = self.out_tensor   
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
                 #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
@@ -299,8 +298,9 @@ class DDIMSampler(object):
                 # raise
                 img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
-
-
+            if self.control_net_use_trt:
+                memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+                img = self.out_tensor   
             ################ orig func call
                 # outs = self.p_sample_ddim(img, conds, ts_all, index=index, use_original_steps=ddim_use_original_steps,
                 #                           quantize_denoised=quantize_denoised, temperature=temperature,

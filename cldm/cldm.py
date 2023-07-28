@@ -46,7 +46,7 @@ class ControlledUnetModel(UNetModel):
                 temp_res = []
                 for i, module in enumerate(res_modules):
                     temp_res.append(module(step_embed[key_idx]).reshape(1, -1, 1, 1))
-                emb_results.append(torch.cat(temp_res, dim=1).cuda())
+                emb_results.append(torch.cat(temp_res, dim=1).cuda().contiguous())
 
             self.step_dict = emb_results
 
@@ -383,7 +383,7 @@ class ControlNet(nn.Module):
                 temp_res = []
                 for i, module in enumerate(res_modules):
                     temp_res.append(module(step_embed[key_idx]).reshape(1, -1, 1, 1))
-                emb_results.append(torch.cat(temp_res, dim=1).cuda())
+                emb_results.append(torch.cat(temp_res, dim=1).cuda().contiguous())
             self.step_dict = emb_results
 
 

@@ -47,15 +47,15 @@ class hackathon():
             os.environ["PL_SEED_WORKERS"] = f"{int(False)}"
 
 
-            if config.save_memory:
-                self.model.low_vram_shift(is_diffusing=False)
+            # if config.save_memory:
+            #     self.model.low_vram_shift(is_diffusing=False)
 
             cond = {"c_concat": control, "c_crossattn": self.model.get_learned_conditioning([prompt + ', ' + a_prompt])}# * num_samples
             un_cond = {"c_concat": None if guess_mode else control, "c_crossattn": self.model.get_learned_conditioning([n_prompt])}# * num_samples
             shape = (4, H // 8, W // 8)
-
-            if config.save_memory:
-                self.model.low_vram_shift(is_diffusing=True)
+            # print(shape)
+            # if config.save_memory:
+            #     self.model.low_vram_shift(is_diffusing=True)
 
             # self.model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)  # Magic number. IDK why. Perhaps because 0.825**12<0.01 but 0.826**12>0.01
             # print(type(self.model))
@@ -64,8 +64,8 @@ class hackathon():
                                                         unconditional_guidance_scale=scale,
                                                         unconditional_conditioning=un_cond)
 
-            if config.save_memory:
-                self.model.low_vram_shift(is_diffusing=False)
+            # if config.save_memory:
+            #     self.model.low_vram_shift(is_diffusing=False)
 
             x_samples = self.model.decode_first_stage(samples)
             x_samples = (einops.rearrange(x_samples, 'b c h w -> b h w c') * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
