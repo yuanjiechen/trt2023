@@ -196,8 +196,8 @@ class CrossAttention(nn.Module):
         sim = sim.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', sim, v)
-        # out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
-        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
+        out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
+        # out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
         return self.to_out(out)
 
 
