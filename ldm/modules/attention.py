@@ -171,10 +171,10 @@ class CrossAttention(nn.Module):
         k = self.to_k(context)
         v = self.to_v(context)
 
-        q = q.reshape([-1, h, self.dim_head]).transpose(0, 1)
-        k = k.reshape([-1, h, self.dim_head]).transpose(0, 1)
-        v = v.reshape([-1, h, self.dim_head]).transpose(0, 1)
-        # q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+        # q = q.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        # k = k.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        # v = v.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
         # force cast to fp32 to avoid overflowing
         # if _ATTN_PRECISION =="fp32":
@@ -196,8 +196,8 @@ class CrossAttention(nn.Module):
         sim = sim.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', sim, v)
-        out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
-        # out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
+        # out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
+        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
         return self.to_out(out)
 
 
