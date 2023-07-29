@@ -196,8 +196,8 @@ class CrossAttention(nn.Module):
         sim = sim.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', sim, v)
-        out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
-        # out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
+        # out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
+        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
         return self.to_out(out)
 
 
@@ -343,18 +343,18 @@ class SpatialTransformer(nn.Module):
         if not self.use_linear and memory_x is None:
             x = self.proj_in(x)
         
-        x = x.reshape([b, c, -1])
-        x = x.transpose(1, 2)
-        # x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
+        # x = x.reshape([b, c, -1])
+        # x = x.transpose(1, 2)
+        x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
         # if self.use_linear and memory_x is None:
         #     x = self.proj_in(x)
         for i, block in enumerate(self.transformer_blocks):
             x, return_memory_x = block(x, context=context[i], memory_x=memory_x)
         # if self.use_linear:
         #     x = self.proj_out(x)
-        x = x.transpose(1, 2)
-        x = x.reshape([b, c, h, w])
-        # x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
+        # x = x.transpose(1, 2)
+        # x = x.reshape([b, c, h, w])
+        x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
         if not self.use_linear:
             x = self.proj_out(x)
 
