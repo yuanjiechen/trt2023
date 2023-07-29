@@ -149,7 +149,8 @@ class CrossAttention(nn.Module):
         super().__init__()
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
-
+        self.dim_head = dim_head
+        self.inner_dim = inner_dim
         self.scale = dim_head ** -0.5
         self.heads = heads
 
@@ -170,7 +171,10 @@ class CrossAttention(nn.Module):
         k = self.to_k(context)
         v = self.to_v(context)
 
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
+        q = q.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        k = k.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        v = v.reshape([-1, h, self.dim_head]).transpose(0, 1)
+        # q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
         # force cast to fp32 to avoid overflowing
         # if _ATTN_PRECISION =="fp32":
@@ -192,7 +196,8 @@ class CrossAttention(nn.Module):
         sim = sim.softmax(dim=-1)
 
         out = einsum('b i j, b j d -> b i d', sim, v)
-        out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
+        out = out.transpose(0, 1).reshape([1, -1, self.inner_dim])
+        # out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
         return self.to_out(out)
 
 
@@ -325,7 +330,7 @@ class SpatialTransformer(nn.Module):
                                                   padding=0))
         else:
             self.proj_out = zero_module(nn.Linear(in_channels, inner_dim))
-        self.use_linear = use_linear
+        self.use_linear = use_linear # False
 
     def forward(self, x, context=None, memory_x=None):
         # note: if no context is given, cross-attention defaults to self-attention
@@ -337,14 +342,19 @@ class SpatialTransformer(nn.Module):
         if memory_x is None: x = self.norm(x)
         if not self.use_linear and memory_x is None:
             x = self.proj_in(x)
-        x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
-        if self.use_linear and memory_x is None:
-            x = self.proj_in(x)
+        
+        x = x.reshape([b, c, -1])
+        x = x.transpose(1, 2)
+        # x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
+        # if self.use_linear and memory_x is None:
+        #     x = self.proj_in(x)
         for i, block in enumerate(self.transformer_blocks):
             x, return_memory_x = block(x, context=context[i], memory_x=memory_x)
-        if self.use_linear:
-            x = self.proj_out(x)
-        x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
+        # if self.use_linear:
+        #     x = self.proj_out(x)
+        x = x.transpose(1, 2)
+        x = x.reshape([b, c, h, w])
+        # x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
         if not self.use_linear:
             x = self.proj_out(x)
 

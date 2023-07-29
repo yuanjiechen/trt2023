@@ -21,3 +21,5 @@ cd ..
 
 # python3 setup.py install --user
 # ninja package
+
+# cmake .. -DTRT_LIB_DIR=/home/player/TensorRT-8.6.1.6/lib
