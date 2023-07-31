@@ -53,7 +53,7 @@ class GEGLU(nn.Module):
 
     def forward(self, x):
         x = self.proj(x)
-        shape_3 = int(x.size(2) / 2)
+        shape_3 = x.size(2) // 2
         x, gate = torch.split(x, shape_3, dim=2)  #x.chunk(2, dim=-1)
         return x * F.gelu(gate)
 

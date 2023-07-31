@@ -1,5 +1,5 @@
 ---
-name: CustomGeluPluginDynamic
+name: CustomGeluPlugin
 interface: "IPluginV2DynamicExt"
 versions:
   "1":
@@ -50,7 +50,7 @@ versions:
       - type_id
     abs_tol: 1e-2
     rel_tol: 1e-2
-    golden_reference_script: "plugin/geluPlugin/CustomGeluPluginDynamic_PluginReference.py"
+    golden_reference_script: "plugin/geluPlugin/CustomGeluPlugin_PluginReference.py"
     configs:
       config1:
         input_types:

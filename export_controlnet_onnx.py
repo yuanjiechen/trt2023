@@ -2,7 +2,7 @@ from canny2image_TRT import hackathon
 import onnx
 import torch
 import pickle
-
+import onnxruntime as ort
 if __name__ == '__main__':
     hk = hackathon()
     hk.initialize()
@@ -34,6 +34,12 @@ if __name__ == '__main__':
         torch.onnx.export(hk.model.first_stage_model, tuple(cuda_vae), "./onnxs/controlnet_vae.onnx", opset_version=17, do_constant_folding=True)
         torch.onnx.export(hk.ddim_sampler.full_model, tuple(cuda_full), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
         torch.onnx.export(hk.ddim_sampler.control_input_block, tuple(cuda_hint), "./onnxs/hint_block.onnx", opset_version=17, do_constant_folding=True)
+        # sess_options = ort.SessionOptions()
+        # sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        # sess_options.optimized_model_filepath = "./onnxs/controlnet_one_loop.onnx"
+        # print("1")
+        # ort_session = ort.InferenceSession("./onnxs/controlnet_one_loop.onnx", sess_options, providers=['CUDAExecutionProvider'])
+        # print("2")
     except BaseException as e:
         print(e)
         raise

@@ -33,9 +33,9 @@ namespace plugin
 namespace bert
 {
 
-int32_t computeGelu(cudaStream_t stream, int32_t n, float const* input, float* output);
+int32_t computeGelu(cudaStream_t stream, int32_t n, float const* input, const float* x, float* output);
 
-int32_t computeGelu(cudaStream_t stream, int32_t n, half const* input, half* output);
+int32_t computeGelu(cudaStream_t stream, int32_t n, half const* input, half const* x, half* output);
 
 int32_t computeGeluBias(
     float* output, float const* input, float const* bias, int32_t const ld, int32_t const cols, cudaStream_t stream);
@@ -43,16 +43,16 @@ int32_t computeGeluBias(
 int32_t computeGeluBias(
     half* output, half const* input, half const* bias, int32_t const ld, int32_t const cols, cudaStream_t stream);
 
-class GeluPluginDynamic : public nvinfer1::IPluginV2DynamicExt
+class GeluPlugin : public nvinfer1::IPluginV2DynamicExt
 {
 public:
-    GeluPluginDynamic(const std::string name, const nvinfer1::DataType type, nvinfer1::Weights const& bias);
+    GeluPlugin(const std::string name);//, const nvinfer1::DataType type, nvinfer1::Weights const& bias);
 
-    GeluPluginDynamic(const std::string name, void const* data, size_t length);
+    GeluPlugin(const std::string name, void const* data, size_t length);
 
-    // It doesn't make sense to make GeluPluginDynamic without arguments, so we delete
+    // It doesn't make sense to make GeluPlugin without arguments, so we delete
     // default constructor.
-    GeluPluginDynamic() = delete;
+    GeluPlugin() = delete;
 
     // IPluginV2DynamicExt Methods
     nvinfer1::IPluginV2DynamicExt* clone() const noexcept override;
@@ -86,7 +86,7 @@ public:
 private:
     // Helper method for enqueue()
     template <typename TDataType>
-    int32_t enqueueTyped(void const* input, void* output, int32_t const inputVolume, cudaStream_t stream) noexcept;
+    int32_t enqueueTyped(void const* input, void const* x_,void* output, int32_t const inputVolume, cudaStream_t stream) noexcept;
 
     const std::string mLayerName;
     std::string mNamespace;
@@ -102,10 +102,10 @@ private:
     using IPluginV2Ext::configurePlugin;
 };
 
-class GeluPluginDynamicCreator : public nvinfer1::IPluginCreator
+class GeluPluginCreator : public nvinfer1::IPluginCreator
 {
 public:
-    GeluPluginDynamicCreator();
+    GeluPluginCreator();
 
     char const* getPluginName() const noexcept override;
 

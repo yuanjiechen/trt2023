@@ -19,7 +19,7 @@
 | [embLayerNormPlugin](embLayerNormPlugin) | CustomEmbLayerNormPluginDynamic | 1, 2 |
 | [fcPlugin](fcPlugin) | CustomFCPluginDynamic | 1 |
 | [flattenConcat](flattenConcat) | FlattenConcat_TRT | 1 |
-| [geluPlugin](geluPlugin) | CustomGeluPluginDynamic | 1 |
+| [geluPlugin](geluPlugin) | CustomGeluPlugin | 1 |
 | [generateDetectionPlugin](generateDetectionPlugin) | GenerateDetection_TRT | 1 |
 | [gridAnchorPlugin](gridAnchorPlugin) | GridAnchor_TRT | 1 |
 | [gridAnchorRectPlugin](gridAnchorPlugin) | GridAnchorRect_TRT | 1 |

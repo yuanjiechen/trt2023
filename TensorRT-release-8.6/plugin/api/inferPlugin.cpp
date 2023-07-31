@@ -176,7 +176,7 @@ extern "C"
 {
     bool initLibNvInferPlugins(void* logger, const char* libNamespace)
     {
-        initializePlugin<nvinfer1::plugin::bert::GeluPluginDynamicCreator>(logger, libNamespace);
+        initializePlugin<nvinfer1::plugin::bert::GeluPluginCreator>(logger, libNamespace);
         // initializePlugin<nvinfer1::plugin::BatchedNMSDynamicPluginCreator>(logger, libNamespace);
         // initializePlugin<nvinfer1::plugin::BatchedNMSPluginCreator>(logger, libNamespace);
         // initializePlugin<nvinfer1::plugin::BatchTilePluginCreator>(logger, libNamespace);

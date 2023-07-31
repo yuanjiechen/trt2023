@@ -16,6 +16,7 @@ import time
 
 from transformers import CLIPTextModel
 from ldm.modules.diffusionmodules.openaimodel import ResBlock
+import ctypes
 class Control_Diff_VAE(torch.nn.Module):
     def __init__(self, control_model):
         super().__init__()
@@ -76,7 +77,9 @@ class DDIMSampler(object):
         self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
         self.full_model = Control_Diff_VAE(self.model)
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
+        # self.model.first_stage_model()
         # print(self.model.control_model)
+        # print(self.model.model.diffusion_model)
         # raise
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
         else: self.control_net_use_trt = True
@@ -84,6 +87,7 @@ class DDIMSampler(object):
 
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
+            ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
             with open("controlnet_one_loop_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()

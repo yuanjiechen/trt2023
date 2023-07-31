@@ -32,7 +32,7 @@ output is a tensor with shape `[S, B, E]` where `B` is the batch size.
 
 ## Parameters
 
-`geluPlugin` has plugin creator class `GeluPluginDynamicCreator` and plugin class `CustomGeluPluginDynamic`.
+`geluPlugin` has plugin creator class `GeluPluginCreator` and plugin class `CustomGeluPlugin`.
 
 The parameters are defined below and consists of the following attributes:
 
