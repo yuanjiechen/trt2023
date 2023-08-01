@@ -71,12 +71,20 @@ class DDIMSampler(object):
         self.schedule = schedule
 
         self.device = torch.device("cuda")
-        self.model.control_model.init_steps()
-        self.model.model.diffusion_model.init_steps()
-
-        self.make_schedule(ddim_num_steps=20, ddim_eta=0.0, verbose=False)
+        self.timesteps = 17
+        self.model.control_model.init_steps(self.timesteps)
+        self.model.model.diffusion_model.init_steps(self.timesteps)
+        
+        self.make_schedule(ddim_num_steps=self.timesteps, ddim_eta=0.0, verbose=False)
         self.full_model = Control_Diff_VAE(self.model)
         self.control_input_block = Control_input_block(self.model.control_model.input_hint_block, self.model.cond_stage_model.transformer)
+        ########## Create tensor only once not 20 times !!!!!   
+        self.alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float).sqrt().contiguous()
+        self.alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]).contiguous() 
+        self.sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() 
+        #sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
+        ##########
+
         # self.model.first_stage_model()
         # print(self.model.control_model)
         # print(self.model.model.diffusion_model)
@@ -87,7 +95,7 @@ class DDIMSampler(object):
 
             logger = trt.Logger(trt.Logger.INFO)
             trt.init_libnvinfer_plugins(logger, '')
-            ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
+            # ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
             with open("controlnet_one_loop_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
@@ -215,12 +223,6 @@ class DDIMSampler(object):
                       ucg_schedule=None):
         device = self.model.betas.device
         # b = shape[0]
-        ########## Create tensor only once not 20 times !!!!!   
-        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float).sqrt().contiguous() #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
-        alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]).contiguous() #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
-        sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
-        #sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
-        ##########
 
 
         img = torch.randn(shape, device=device)
@@ -235,7 +237,7 @@ class DDIMSampler(object):
 
         #intermediates = {'x_inter': [img], 'pred_x0': [img]}
         #time_range = reversed(range(0,timesteps)) if ddim_use_original_steps else np.flip(timesteps)
-        total_steps = 20 #timesteps if ddim_use_original_steps else timesteps.shape[0]
+        total_steps = self.timesteps #timesteps if ddim_use_original_steps else timesteps.shape[0]
 
         #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
@@ -282,9 +284,9 @@ class DDIMSampler(object):
                 self.bindings[3] = int(c_cond_txt.data_ptr())
                 self.bindings[4] = int(c_hint.data_ptr())
                 self.bindings[5] = int(u_cond_txt.data_ptr())
-                self.bindings[6] = int(alphas[index].data_ptr())
-                self.bindings[7] = int(alphas_prev[index].data_ptr())
-                self.bindings[8] = int(sqrt_one_minus_alphas[index].data_ptr())             
+                self.bindings[6] = int(self.alphas[index].data_ptr())
+                self.bindings[7] = int(self.alphas_prev[index].data_ptr())
+                self.bindings[8] = int(self.sqrt_one_minus_alphas[index].data_ptr())             
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
@@ -300,7 +302,7 @@ class DDIMSampler(object):
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")
                 # raise
-                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index])#, sigmas[index])
+                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
             if self.control_net_use_trt:
                 memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)

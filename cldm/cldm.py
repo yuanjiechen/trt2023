@@ -28,8 +28,9 @@ import time
 import torch.nn.functional as F
 from ldm.modules.diffusionmodules.openaimodel import ResBlock, Downsample
 class ControlledUnetModel(UNetModel):
-    def init_steps(self):
-        step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+    def init_steps(self, timesteps):
+        # step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+        step_keys = np.linspace(951, 1, timesteps).astype(np.int32)
         step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values] # 20
@@ -366,8 +367,9 @@ class ControlNet(nn.Module):
         self.middle_block_out = self.make_zero_conv(ch)
         self._feature_size += ch
 
-    def init_steps(self):
-        step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+    def init_steps(self, timesteps):
+        # step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
+        step_keys = np.linspace(951, 1, timesteps).astype(np.int32)
         step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values]
