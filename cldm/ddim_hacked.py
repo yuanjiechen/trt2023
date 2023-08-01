@@ -40,7 +40,7 @@ class Control_Diff_VAE(torch.nn.Module):
 
         e_t = model_output
 
-        pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t.sqrt()
+        pred_x0 = (img - sqrt_one_minus_at * e_t) / a_t
 
         dir_xt = (1. - a_prev).sqrt() * e_t
 
@@ -216,7 +216,7 @@ class DDIMSampler(object):
         device = self.model.betas.device
         # b = shape[0]
         ########## Create tensor only once not 20 times !!!!!   
-        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
+        alphas =  torch.reshape(self.ddim_alphas, [len(self.ddim_alphas), 1, 1, 1, 1]).to(torch.float).sqrt().contiguous() #[torch.full((1, 1, 1, 1), alphas[idx], device=self.device) for idx in range(len(alphas))]
         alphas_prev = torch.from_numpy(self.ddim_alphas_prev).to(self.device, torch.float).reshape([len(self.ddim_alphas_prev), 1, 1, 1, 1]).contiguous() #[torch.full((1, 1, 1, 1), alphas_prev[idx], device=self.device) for idx in range(len(alphas_prev))]
         sqrt_one_minus_alphas = torch.reshape(self.ddim_sqrt_one_minus_alphas, [len(self.ddim_sqrt_one_minus_alphas), 1, 1, 1, 1]).to(torch.float).contiguous() #[torch.full((1, 1, 1, 1), sqrt_one_minus_alphas[idx], device=self.device) for idx in range(len(sqrt_one_minus_alphas))]
         #sigmas = torch.reshape(self.ddim_sigmas, [len(self.ddim_sigmas), 1, 1, 1, 1]).to(torch.float) #[torch.full((1, 1, 1, 1), sigmas[idx], device=self.device) for idx in range(len(sigmas))]
@@ -240,10 +240,10 @@ class DDIMSampler(object):
         #steps = torch.from_numpy(np.ascontiguousarray(time_range)).to(device=device, dtype=torch.long).reshape([len(time_range), -1])
 
         ############ RUN ONLY ONE TIME NOT 20 TIMES !!!
-        c_cond_txt = torch.cat([cond['c_crossattn']], 1).to(torch.int32)
-        c_hint = torch.cat([cond['c_concat']], 1)
+        c_cond_txt =  torch.cat([cond['c_crossattn']], 1).to(torch.int32) #cond['c_crossattn'].to(torch.int32) #
+        c_hint = torch.cat([cond['c_concat']], 1) #cond['c_concat'] #
 
-        u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1).to(torch.int32)
+        u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1).to(torch.int32) #unconditional_conditioning['c_crossattn'].to(torch.int32) #
         # print(c_cond_txt, u_cond_txt)
         # u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
         ############

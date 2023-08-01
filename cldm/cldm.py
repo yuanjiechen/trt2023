@@ -116,14 +116,16 @@ class ControlledUnetModel(UNetModel):
         if control is not None:
             h += control[j]#.pop()
             j -= 1
-
+        k = len(hs) - 1
         for i, module in enumerate(self.output_blocks):
             emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            if only_mid_control or control is None:
-                h = torch.cat([h, hs.pop()], dim=1)
-            else:
-                h = torch.cat([h, hs.pop() + control[j]], dim=1)
-                j -= 1
+            # if only_mid_control or control is None:
+            #     h = torch.cat([h, hs.pop()], dim=1)
+            # else:
+ 
+            h = torch.cat([h, hs[k] + control[j]], dim=1)
+            k -= 1
+            j -= 1
             h, _, _ = module(h, emb, context)
             emb_idx += emb_indexs[emb_start]
             emb_start += 1

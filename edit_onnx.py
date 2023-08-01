@@ -2,7 +2,7 @@ import torch
 import onnx
 import onnx_graphsurgeon as gs
 
-file_name = "./onnxs/controlnet_one_loop_folded_I.onnx"
+file_name = "./onnxs/controlnet_one_loop_folded.onnx"
 edit_nodes = []
 last_nodes = []
 
@@ -10,9 +10,16 @@ graph = gs.import_onnx(onnx.load(file_name))
 cast_node = []
 for node in graph.nodes:
     if node.op == "Cast":
-        print("iiii")
-        node.op = "Identity"
-# onnx.save(gs.export_onnx(graph), file_name + "I", save_as_external_data=True)
+        while len(node.outputs[0].outputs) != 0:
+            outputs_node = node.outputs[0].outputs[0]
+            for i, input_node in enumerate(outputs_node.inputs):
+                if len(input_node.inputs) > 0 and id(node) == id(input_node.inputs[0]):
+                    outputs_node.inputs[i] = node.inputs[0]
+        
+        node.outputs.clear()
+        node.inputs.clear()
+graph.cleanup(True, True, True).toposort()
+onnx.save(gs.export_onnx(graph), file_name, save_as_external_data=True)
 import os
 os._exit(0)
 
