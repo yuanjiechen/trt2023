@@ -7,7 +7,7 @@ polygraphy surgeon sanitize --fold-constants controlnet_vae.onnx -o controlnet_v
 polygraphy surgeon sanitize --fold-constants hint_block.onnx -o hint_block_folded.onnx --save-external-data 
 
 cd ..
-/usr/bin/python3 edit_onnx.py
+# /usr/bin/python3 edit_onnx.py
 cd onnxs
 
 # trtexec --onnx=./controlnet_full.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_full_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph
