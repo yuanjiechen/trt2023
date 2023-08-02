@@ -277,19 +277,32 @@ class DDIMSampler(object):
             ts_df = self.model.model.diffusion_model.step_dict[i] #steps[i].item()
 
             if self.control_net_use_trt:
-                if i == 0: self.bindings[0] = int(img.data_ptr())
-                else: self.bindings[0] = int(self.outputs[0].device)
-                self.bindings[1] = int(ts.data_ptr())
-                self.bindings[2] = int(ts_df.data_ptr())
-                self.bindings[3] = int(c_cond_txt.data_ptr())
-                self.bindings[4] = int(c_hint.data_ptr())
-                self.bindings[5] = int(u_cond_txt.data_ptr())
-                self.bindings[6] = int(self.alphas[index].data_ptr())
-                self.bindings[7] = int(self.alphas_prev[index].data_ptr())
-                self.bindings[8] = int(self.sqrt_one_minus_alphas[index].data_ptr())             
-                self.context.execute_async_v2(
-                    bindings=self.bindings,
-                    stream_handle=self.stream)
+                if i == 0: self.context.set_tensor_address("input.1", img.data_ptr())
+                else: self.context.set_tensor_address("input.1", self.outputs[0].device)
+                self.context.set_tensor_address("onnx::Slice_1", ts.data_ptr())
+                self.context.set_tensor_address("onnx::Slice_2", ts_df.data_ptr())
+                self.context.set_tensor_address("onnx::MatMul_3", c_cond_txt.data_ptr())
+                self.context.set_tensor_address("onnx::Add_4", c_hint.data_ptr())
+                self.context.set_tensor_address("onnx::MatMul_5", u_cond_txt.data_ptr())
+                self.context.set_tensor_address("onnx::Div_6", self.alphas[index].data_ptr())
+                self.context.set_tensor_address("onnx::Sub_7", self.alphas_prev[index].data_ptr())
+                self.context.set_tensor_address("onnx::Mul_8", self.sqrt_one_minus_alphas[index].data_ptr())
+                self.context.set_tensor_address("24648", self.outputs[0].device)
+                self.context.execute_async_v3(self.stream)
+
+                # if i == 0: self.bindings[0] = img.data_ptr()
+                # else: self.bindings[0] = self.outputs[0].device
+                # self.bindings[1] = ts.data_ptr()
+                # self.bindings[2] = ts_df.data_ptr()
+                # self.bindings[3] = c_cond_txt.data_ptr()
+                # self.bindings[4] = c_hint.data_ptr()
+                # self.bindings[5] = u_cond_txt.data_ptr()
+                # self.bindings[6] = self.alphas[index].data_ptr()
+                # self.bindings[7] = self.alphas_prev[index].data_ptr()
+                # self.bindings[8] = self.sqrt_one_minus_alphas[index].data_ptr()         
+                # self.context.execute_async_v2(
+                #     bindings=self.bindings,
+                #     stream_handle=self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
                 
                 # memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
