@@ -36,9 +36,9 @@ class hackathon():
             detected_map = self.apply_canny(img, low_threshold, high_threshold)
             detected_map = HWC3(detected_map)
 
-            control = torch.from_numpy(detected_map.copy()).float().cuda() / 255.0
-            control = torch.stack([control for _ in range(num_samples)], dim=0)
-            control = einops.rearrange(control, 'b h w c -> b c h w').clone()
+            control = torch.from_numpy(detected_map).float().cuda() / 255.0
+            control = control.unsqueeze(0)
+            control = einops.rearrange(control, 'b h w c -> b c h w')
 
             if seed == -1:
                 seed = random.randint(0, 65535)
@@ -51,7 +51,7 @@ class hackathon():
             #     self.model.low_vram_shift(is_diffusing=False)
 
             cond = {"c_concat": control, "c_crossattn": self.model.get_learned_conditioning([prompt + ', ' + a_prompt])}# * num_samples
-            un_cond = {"c_concat": None if guess_mode else control, "c_crossattn": self.model.get_learned_conditioning([n_prompt])}# * num_samples
+            un_cond = {"c_concat": control, "c_crossattn": self.model.get_learned_conditioning([n_prompt])}# * num_samples
             shape = (4, H // 8, W // 8)
             # print(shape)
             # if config.save_memory:
@@ -70,5 +70,5 @@ class hackathon():
             x_samples = self.model.decode_first_stage(samples)
             x_samples = (einops.rearrange(x_samples, 'b c h w -> b h w c') * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
 
-            results = [x_samples[i] for i in range(num_samples)]
+            results = x_samples #[x_samples[i] for i in range(num_samples)]
         return results
