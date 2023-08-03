@@ -47,7 +47,7 @@ set(PLUGIN_LISTS
 #     flattenConcat
 #     generateDetectionPlugin
 #     gridAnchorPlugin
-#     groupNormalizationPlugin
+     groupNormalizationPlugin
 #     instanceNormalizationPlugin
 #     leakyReluPlugin
 #     modulatedDeformConvPlugin

@@ -17,6 +17,16 @@ from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
 import time
+import pickle
+
+from pytorch_quantization import nn as quant_nn
+from pytorch_quantization import quant_modules, tensor_quant, calib
+from util import set_quantizer_by_name
+
+quant = False
+if quant:
+    quant_modules.initialize()
+    quant_nn.TensorQuantizer.use_fb_fake_quant = True
 class hackathon():
 
     def initialize(self):
@@ -25,7 +35,25 @@ class hackathon():
         # self.model.load_state_dict(load_state_dict('./models/control_sd15_canny.pth', location='cuda'))
         self.model.load_state_dict(load_state_dict('/home/player/ControlNet/models/control_sd15_canny.pth', location='cuda'))
         self.model = self.model.cuda()
+        if quant:
+
+            for name, module in self.model.named_modules():
+                if hasattr(module, "quant_add"): 
+                    setattr(module, "quant_add", True)
+                    print(f"Set {name} quant_add as True")
+            
+            self.quantize()
         self.ddim_sampler = DDIMSampler(self.model)
+    
+    def quantize(self):
+        set_quantizer_by_name(self.model, ['transformer_blocks'], _disabled=True)
+        with open("amax.pkl", "rb") as f:
+            amax_list = pickle.load(f)
+            i = 0
+            for name, module in self.model.named_modules():
+                if isinstance(module, quant_nn.TensorQuantizer) and module._disabled != True:
+                    module.register_buffer("_amax", torch.from_numpy(amax_list[i]).float().cuda())
+                    i += 1
 
 
     def process(self, input_image, prompt, a_prompt, n_prompt, num_samples, image_resolution, ddim_steps, guess_mode, strength, scale, seed, eta, low_threshold, high_threshold):
