@@ -19,12 +19,13 @@ from cldm.ddim_hacked import DDIMSampler
 import time
 import pickle
 
-from pytorch_quantization import nn as quant_nn
-from pytorch_quantization import quant_modules, tensor_quant, calib
-from util import set_quantizer_by_name
+
 
 quant = False
 if quant:
+    from pytorch_quantization import nn as quant_nn
+    from pytorch_quantization import quant_modules, tensor_quant, calib
+    from util import set_quantizer_by_name
     quant_modules.initialize()
     quant_nn.TensorQuantizer.use_fb_fake_quant = True
 class hackathon():

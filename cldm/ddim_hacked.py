@@ -71,7 +71,7 @@ class DDIMSampler(object):
         self.schedule = schedule
 
         self.device = torch.device("cuda")
-        self.timesteps = 16
+        self.timesteps = 15
         self.model.control_model.init_steps(self.timesteps)
         self.model.model.diffusion_model.init_steps(self.timesteps)
         
@@ -87,10 +87,10 @@ class DDIMSampler(object):
 
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = True
+        else: self.control_net_use_trt = False
 
         if not Path("hint_block_fp16.engine").exists(): self.input_block_use_trt = False
-        else: self.input_block_use_trt = True
+        else: self.input_block_use_trt = False
 
         logger = trt.Logger(trt.Logger.INFO)
         trt.init_libnvinfer_plugins(logger, '')

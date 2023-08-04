@@ -18,9 +18,9 @@ from ldm.modules.diffusionmodules.util import (
 from ldm.modules.attention import SpatialTransformer
 from ldm.util import exists
 
-from pytorch_quantization import nn as quant_nn
-from pytorch_quantization import quant_modules, tensor_quant, calib
-from pytorch_quantization.tensor_quant import QuantDescriptor
+# from pytorch_quantization import nn as quant_nn
+# from pytorch_quantization import quant_modules, tensor_quant, calib
+# from pytorch_quantization.tensor_quant import QuantDescriptor
 # dummy replace
 def convert_module_to_f16(x):
     pass
@@ -255,8 +255,8 @@ class ResBlock(TimestepBlock):
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
         self.quant_add = False
-        self.add_module_emb = Add_module()
-        self.add_module_res = Add_module()
+        #self.add_module_emb = Add_module()
+        #self.add_module_res = Add_module()
 
     def forward(self, x, emb):
         """

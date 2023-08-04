@@ -17,7 +17,7 @@ trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./
 
 # int8
 # trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --int8 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --sparsity=enable
-# trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=20000 --best --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph  --sparsity=enable --timingCacheFile=../cache.engine
+# trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=20000 --best --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 # --useCudaGraph  --sparsity=enable --timingCacheFile=../cache.engine
 # trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --int8 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph 
 # /home/player/.local/bin/polygraphy
 # mv controlnet_full_fp16.engine ../
@@ -25,8 +25,8 @@ mv controlnet_vae_fp16.engine ../
 mv controlnet_one_loop_fp16.engine ../
 mv hint_block_fp16.engine ../
 cd ..
-# trtexec --onnx=./controlnet.onnx --exportProfile=./profile.json --exportLayerInfo=./layerinfo.json --profilingVerbosity=detailed --workspace=16384 --saveEngine=./controlnet.engine --infStreams=4
 
+# trtexec --loadEngine=./controlnet_one_loop_fp16.engine --exportProfile=./onnxs/profile_one.json --exportLayerInfo=./onnxs/layerinfo_one.json --infStreams=4 --maxAuxStreams=10
 # python3 setup.py install --user
 # ninja package
 
