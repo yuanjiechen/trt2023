@@ -87,16 +87,16 @@ class DDIMSampler(object):
 
 
         if not Path("controlnet_one_loop_fp16.engine").exists(): self.control_net_use_trt = False
-        else: self.control_net_use_trt = False
+        else: self.control_net_use_trt = True
 
         if not Path("hint_block_fp16.engine").exists(): self.input_block_use_trt = False
-        else: self.input_block_use_trt = False
+        else: self.input_block_use_trt = True
 
         logger = trt.Logger(trt.Logger.INFO)
         trt.init_libnvinfer_plugins(logger, '')
 
         if self.control_net_use_trt:
-            # ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
+            # ctypes.cdll.LoadLibrary("/home/player/ControlNet/TensorRT-release-8.6/build/libnvinfer_plugin.so")
             with open("controlnet_one_loop_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()

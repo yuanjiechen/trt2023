@@ -1,6 +1,7 @@
 import torch
 import onnx
 import onnx_graphsurgeon as gs
+import copy
 
 file_name = "./onnxs/controlnet_one_loop_folded.onnx"
 edit_nodes = []
@@ -18,6 +19,23 @@ for node in graph.nodes:
         
         node.outputs.clear()
         node.inputs.clear()
+
+    # elif node.op == "InstanceNormalization":
+    #     i = node.i()
+    #     o = node.o()
+    #     node.attrs["eps"] = node.attrs["epsilon"]
+    #     node.attrs["num_groups"] = 32
+    #     node.op = "GroupNormalizationPlugin2"
+    #     node.inputs[0] = node.i().inputs[0]
+    #     node.outputs[0] = node.o().outputs[0]
+
+    #     i.inputs.clear()
+    #     i.outputs.clear()
+
+    #     o.inputs.clear()
+    #     o.outputs.clear()
+
+
 graph.cleanup(True, True, True).toposort()
 onnx.save(gs.export_onnx(graph), file_name, save_as_external_data=True)
 import os
