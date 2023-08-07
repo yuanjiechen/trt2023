@@ -254,9 +254,9 @@ class ResBlock(TimestepBlock):
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
-        self.quant_add = False
-        #self.add_module_emb = Add_module()
-        #self.add_module_res = Add_module()
+        # self.quant_add = False
+        # self.add_module_emb = Add_module()
+        # self.add_module_res = Add_module()
 
     def forward(self, x, emb):
         """
@@ -288,15 +288,15 @@ class ResBlock(TimestepBlock):
         #     h = out_norm(h) * (1 + scale) + shift
         #     h = out_rest(h)
         # else:
-        if self.quant_add == False:
-            h.add_(emb) #emb_out
-            h = self.out_layers(h)
-            h.add_(self.skip_connection(x))
+        # if self.quant_add == False:
+        h.add_(emb) #emb_out
+        h = self.out_layers(h)
+        h.add_(self.skip_connection(x))
         
-        else:
-            h = self.add_module_emb(h, emb)
-            h = self.out_layers(h)
-            h = self.add_module_res(h, self.skip_connection(x))
+        # else:
+        #     h = self.add_module_emb(h, emb)
+        #     h = self.out_layers(h)
+        #     h = self.add_module_res(h, self.skip_connection(x))
             # h.add_(self.skip_connection(x))
 
         return h

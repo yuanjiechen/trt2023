@@ -38,17 +38,17 @@ class hackathon():
         self.model = self.model.cuda()
         if quant:
 
-            for name, module in self.model.named_modules():
-                if hasattr(module, "quant_add"): 
-                    setattr(module, "quant_add", True)
-                    print(f"Set {name} quant_add as True")
+            # for name, module in self.model.named_modules():
+            #     if hasattr(module, "quant_add"): 
+            #         setattr(module, "quant_add", True)
+            #         print(f"Set {name} quant_add as True")
             
             self.quantize()
         self.ddim_sampler = DDIMSampler(self.model)
     
     def quantize(self):
         set_quantizer_by_name(self.model, ['transformer_blocks'], _disabled=True)
-        with open("amax.pkl", "rb") as f:
+        with open("amax_300.pkl", "rb") as f:
             amax_list = pickle.load(f)
             i = 0
             for name, module in self.model.named_modules():
