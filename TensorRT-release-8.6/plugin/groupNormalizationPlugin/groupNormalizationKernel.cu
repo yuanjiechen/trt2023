@@ -54,10 +54,14 @@ cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const 
     constexpr int TPB = 256;
     const int colBlocks = (channelVolume + TPB - 1) / TPB;
     const dim3 grid(colBlocks, C, B);
-
+    std::cout << "before cuda kernel\n";
+    std::cout << sizeof(T) << endl;
     scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, beta, gamma);
+    cudaStreamSynchronize(stream);
+    cudaError_t err = cudaPeekAtLastError();
+    std::cout << err <<"    after cuda kernel\n";
 
-    return cudaPeekAtLastError();
+    return err;
 }
 
 template cudaError_t scaleShiftChannelsInplace<float>(float* inOut, const int B, const int C, const int channelVolume, const float* beta,
