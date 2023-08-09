@@ -279,7 +279,8 @@ class ResBlock(TimestepBlock):
             h = in_conv(h)
         else:
             h = self.in_layers(x)
-        # emb_out = self.emb_layers(emb).type(h.dtype)
+        emb_out = self.emb_layers(emb)#.type(h.dtype)
+        emb_out = emb_out.reshape([1, -1, 1, 1])
         # while len(emb_out.shape) < len(h.shape):
         #     emb_out = emb_out[..., None]
         # if self.use_scale_shift_norm:
@@ -289,7 +290,7 @@ class ResBlock(TimestepBlock):
         #     h = out_rest(h)
         # else:
         # if self.quant_add == False:
-        h.add_(emb) #emb_out
+        h.add_(emb_out) #emb
         h = self.out_layers(h)
         h.add_(self.skip_connection(x))
         
