@@ -104,6 +104,7 @@ private:
 
     // Describes input and output.
     cudnnTensorDescriptor_t mTensorDesc{};
+    cudnnTensorDescriptor_t mTensorDesc2{};
     cudnnTensorDescriptor_t mBNTensorDesc{};
 
     // These are buffers initialized to 1 and 0 respectively
