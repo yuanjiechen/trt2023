@@ -102,6 +102,7 @@ class hackathon():
             self.seeds.append(seed)
             if len(self.seeds) > 20:
                 try:
+                    print(self.seeds)
                     raise
                 except:
                     print(self.seeds)
