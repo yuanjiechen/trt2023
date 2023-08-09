@@ -102,8 +102,8 @@ class hackathon():
             self.seeds.append(seed)
             if len(self.seeds) > 20:
                 try:
-                    print(self.seeds)
-                    raise
+
+                    raise RuntimeError(self.seeds)
                 except:
                     print(self.seeds)
                     raise
