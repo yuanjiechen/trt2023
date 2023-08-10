@@ -11,11 +11,7 @@ cd ..
 cd onnxs
 
 trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
-<<<<<<< HEAD
-trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph   --useSpinWait --noDataTransfers --sparsity=enable  --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  # --staticPlugins=/home/player/ControlNet/TensorRT-release-8.6/build/libnvinfer_plugin.so # 
-=======
 # trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph   --useSpinWait --noDataTransfers --sparsity=enable # --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  # --staticPlugins=/home/player/ControlNet/TensorRT-release-8.6/build/libnvinfer_plugin.so # 
->>>>>>> 6d77e35f96bbd38844173b36d889ee81e7a8c072
 trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph  --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
 
 # int8
