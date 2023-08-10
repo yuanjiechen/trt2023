@@ -71,7 +71,11 @@ class DDIMSampler(object):
         self.schedule = schedule
 
         self.device = torch.device("cuda")
+<<<<<<< HEAD
         self.timesteps = 12
+=======
+        self.timesteps = 13
+>>>>>>> 6d77e35f96bbd38844173b36d889ee81e7a8c072
         self.model.control_model.init_steps(self.timesteps)
         self.model.model.diffusion_model.init_steps(self.timesteps)
         
