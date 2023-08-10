@@ -59,7 +59,7 @@ cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const 
     scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, beta, gamma);
     // cudaStreamSynchronize(stream);
     // cudaError_t err = cudaPeekAtLastError();
-    // std::cout << err <<"    after cuda kernel\n";
+    // std::cout  << err << "    after cuda kernel\n";
 
     return cudaPeekAtLastError();
 }

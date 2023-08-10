@@ -11,12 +11,12 @@ cd ..
 cd onnxs
 
 trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
-# trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph   --useSpinWait --noDataTransfers --sparsity=enable # --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  # --staticPlugins=/home/player/ControlNet/TensorRT-release-8.6/build/libnvinfer_plugin.so # 
+trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=16384 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph   --useSpinWait --noDataTransfers --sparsity=enable  --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  --staticPlugins=../lib/libnvinfer_plugin.so # 
 trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph  --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
 
 # int8
 # trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --int8 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --sparsity=enable
-trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=20000 --best --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10  --useCudaGraph  --calib=../int8.cache #--timingCacheFile=../cache.engine --sparsity=enable 
+# trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=20000 --best --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10  --useCudaGraph  --calib=../int8.cache #--timingCacheFile=../cache.engine --sparsity=enable 
 # trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --int8 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph 
 
 mv controlnet_vae_fp16.engine ../

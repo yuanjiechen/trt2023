@@ -113,11 +113,13 @@ void GroupNormalizationPlugin::attachToContext(
 void GroupNormalizationPlugin::detachFromContext() noexcept
 {
     try
-    {
+    {   
+        // std::cout << "destroy start" << endl;
         PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc));
         PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc2));
         PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mBNTensorDesc));
         mCudnnHandle = nullptr;
+        // std::cout << "destroy end" << endl;
     }
     catch (std::exception const& e)
     {
@@ -129,23 +131,23 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     nvinfer1::PluginTensorDesc const* outputDesc, void const* const* inputs, void* const* outputs, void* workspace,
     cudaStream_t stream) noexcept
 {
-    std::cout<< int32_t(inputDesc[0].type)<< "   enqueue start\n";
-    try
-    {
-        PLUGIN_VALIDATE(inputDesc != nullptr);
-        PLUGIN_VALIDATE(inputs != nullptr);
-        PLUGIN_VALIDATE(outputs != nullptr);
-        PLUGIN_VALIDATE(mBnScales != nullptr && mBnScales->mPtr != nullptr);
-        PLUGIN_VALIDATE(mBnBias != nullptr && mBnBias->mPtr != nullptr);
-        PLUGIN_VALIDATE(mCudnnHandle != nullptr);
-        PLUGIN_VALIDATE(mTensorDesc != nullptr);
-        PLUGIN_VALIDATE(mBNTensorDesc != nullptr);
-    }
-    catch (std::exception const& e)
-    {   
-        caughtError(e);
-        return STATUS_FAILURE;
-    }
+    // std::cout<< int32_t(inputDesc[0].type)<< "   enqueue start\n";
+    // try
+    // {
+    //     PLUGIN_VALIDATE(inputDesc != nullptr);
+    //     PLUGIN_VALIDATE(inputs != nullptr);
+    //     PLUGIN_VALIDATE(outputs != nullptr);
+    //     PLUGIN_VALIDATE(mBnScales != nullptr && mBnScales->mPtr != nullptr);
+    //     PLUGIN_VALIDATE(mBnBias != nullptr && mBnBias->mPtr != nullptr);
+    //     PLUGIN_VALIDATE(mCudnnHandle != nullptr);
+    //     PLUGIN_VALIDATE(mTensorDesc != nullptr);
+    //     PLUGIN_VALIDATE(mBNTensorDesc != nullptr);
+    // }
+    // catch (std::exception const& e)
+    // {   
+    //     caughtError(e);
+    //     return STATUS_FAILURE;
+    // }
 
     PLUGIN_CHECK_CUDNN(cudnnSetStream(mCudnnHandle, stream));
 
@@ -155,7 +157,6 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     // cudnnBatchNorm will normalize over the last two dimensions.
     float const one = 1.F;
     float const zero = 0.F;
-    std::cout<< int32_t(inputDesc[0].type)<< "   enqueue start cudnn\n";
     PLUGIN_CHECK_CUDNN(cudnnBatchNormalizationForwardTraining(mCudnnHandle, // handle
         CUDNN_BATCHNORM_SPATIAL,                                            // BatchNormMode_t, try also non persistent
         &one,                                                               //
@@ -174,28 +175,26 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
         nullptr,                                                            // resultSaveMean
         nullptr                                                             // resultSaveInvVar
         ));
-    std::cout<< int32_t(inputDesc[0].type)<< "   enqueue cudnn\n";
+    // std::cout<< int32_t(inputDesc[0].type)<< "   enqueue cudnn\n";
     // Apply an additional scale and bias on each channel.
     nvinfer1::Dims inputDims = inputDesc[0].dims;
     int32_t batchSize = inputDims.d[0];
     int32_t nbChannels = inputDims.d[1]; 
     // auto* output = static_cast<float*>(outputs[0]);
-    int32_t err = 0;
-    
+
     switch (inputDesc[0].type)
     {
     case DataType::kFLOAT: {
         auto* output = static_cast<float*>(outputs[0]);
-        err = scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
+        return scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
     }
     case DataType::kHALF: {
         auto* output = static_cast<half*>(outputs[0]);
-        err = scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
+        return scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
     }
     default: return STATUS_FAILURE;
     }
-    std::cout<< int32_t(inputDesc[0].type)<< "   enqueue end\n";
-    return err;
+
 
     // return scaleShiftChannelsInplace(outputs[0], batchSize, nbChannels, mChannelVolume,
     //     static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream); // mBetaDev, mGammaDev,

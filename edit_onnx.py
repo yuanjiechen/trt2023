@@ -20,12 +20,12 @@ for node in graph.nodes:
         node.outputs.clear()
         node.inputs.clear()
 
-    # elif node.op == "InstanceNormalization":
+    elif node.op == "InstanceNormalization":
     #     i = node.i()
     #     o = node.o()
-    #     node.attrs["eps"] = node.attrs["epsilon"]
-    #     node.attrs["num_groups"] = 32
-    #     node.op = "GroupNormalizationPlugin2"
+        node.attrs["eps"] = node.attrs["epsilon"]
+        node.attrs["num_groups"] = 32
+        node.op = "GroupNormalizationPlugin2"
     #     node.inputs[0] = node.i().inputs[0]
     #     node.outputs[0] = node.o().outputs[0]
 

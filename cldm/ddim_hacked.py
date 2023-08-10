@@ -71,7 +71,7 @@ class DDIMSampler(object):
         self.schedule = schedule
 
         self.device = torch.device("cuda")
-        self.timesteps = 13
+        self.timesteps = 12
         self.model.control_model.init_steps(self.timesteps)
         self.model.model.diffusion_model.init_steps(self.timesteps)
         
@@ -96,7 +96,7 @@ class DDIMSampler(object):
         trt.init_libnvinfer_plugins(logger, '')
 
         if self.control_net_use_trt:
-            # ctypes.cdll.LoadLibrary("/home/player/ControlNet/TensorRT-release-8.6/build/libnvinfer_plugin.so")
+            ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
             with open("controlnet_one_loop_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
                 self.context = model.create_execution_context()
