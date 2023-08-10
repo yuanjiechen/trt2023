@@ -18,7 +18,9 @@ from ldm.modules.diffusionmodules.util import (
 from ldm.modules.attention import SpatialTransformer
 from ldm.util import exists
 
-
+# from pytorch_quantization import nn as quant_nn
+# from pytorch_quantization import quant_modules, tensor_quant, calib
+# from pytorch_quantization.tensor_quant import QuantDescriptor
 # dummy replace
 def convert_module_to_f16(x):
     pass
@@ -160,7 +162,18 @@ class Downsample(nn.Module):
         assert x.shape[1] == self.channels
         return self.op(x)
 
+class Add_module(nn.Module):
+    def __init__(self):
+        super().__init__()
 
+        quant_desc_input_adds = QuantDescriptor(calib_method='histogram')
+        self.add_quantizer_1 = quant_nn.TensorQuantizer(quant_desc_input_adds)
+        self.add_quantizer_2 = quant_nn.TensorQuantizer(quant_desc_input_adds)
+    def forward(self, add1, add2):
+        quant_add1 = self.add_quantizer_1(add1)
+        quant_add2 = self.add_quantizer_2(add2)
+
+        return quant_add1 + quant_add2
 class ResBlock(TimestepBlock):
     """
     A residual block that can optionally change the number of channels.
@@ -241,6 +254,10 @@ class ResBlock(TimestepBlock):
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
+        # self.quant_add = False
+        # self.add_module_emb = Add_module()
+        # self.add_module_res = Add_module()
+
     def forward(self, x, emb):
         """
         Apply the block to a Tensor, conditioned on a timestep embedding.
@@ -262,18 +279,27 @@ class ResBlock(TimestepBlock):
             h = in_conv(h)
         else:
             h = self.in_layers(x)
-        # emb_out = self.emb_layers(emb).type(h.dtype)
+        emb_out = self.emb_layers(emb)#.type(h.dtype)
+        emb_out = emb_out.reshape([1, -1, 1, 1])
         # while len(emb_out.shape) < len(h.shape):
         #     emb_out = emb_out[..., None]
-        if self.use_scale_shift_norm:
-            out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
-            scale, shift = th.chunk(emb_out, 2, dim=1)
-            h = out_norm(h) * (1 + scale) + shift
-            h = out_rest(h)
-        else:
-            h.add_(emb) #emb_out
-            h = self.out_layers(h)
-            h.add_(self.skip_connection(x))
+        # if self.use_scale_shift_norm:
+        #     out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
+        #     scale, shift = th.chunk(emb_out, 2, dim=1)
+        #     h = out_norm(h) * (1 + scale) + shift
+        #     h = out_rest(h)
+        # else:
+        # if self.quant_add == False:
+        h.add_(emb_out) #emb
+        h = self.out_layers(h)
+        h.add_(self.skip_connection(x))
+        
+        # else:
+        #     h = self.add_module_emb(h, emb)
+        #     h = self.out_layers(h)
+        #     h = self.add_module_res(h, self.skip_connection(x))
+            # h.add_(self.skip_connection(x))
+
         return h
 
 

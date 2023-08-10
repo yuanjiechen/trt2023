@@ -283,7 +283,7 @@ class DDIMSampler(object):
 
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
-                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index]], f)
+                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index]], f)
                 # raise
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")

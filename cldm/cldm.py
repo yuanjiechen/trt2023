@@ -31,10 +31,11 @@ class ControlledUnetModel(UNetModel):
     def init_steps(self, timesteps):
         # step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
         step_keys = np.linspace(951, 1, timesteps).astype(np.int32)
-        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
+        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False).contiguous() for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values] # 20
-            # self.step_dict = step_embed 
+            self.step_dict = step_embed 
+            return
             res_modules = [] # emb layers
             emb_results = []
 
@@ -83,43 +84,43 @@ class ControlledUnetModel(UNetModel):
 
 
             for i, module in enumerate(self.input_blocks):
-                emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+                # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
                 if i == 0:
                     if memory_x is None: h, _, _ = module(h, emb, context)
                 elif i == 1:
                     if memory_x is not None: h = x_in
                     h, return_memory_x, x_in = module(h, emb, context, memory_x)
-                    emb_idx += emb_indexs[emb_start]
-                    emb_start += 1
+                    # emb_idx += emb_indexs[emb_start]
+                    # emb_start += 1
                     memory_x = None
                 else:
                     h, _, _ = module(h, emb, context)
-                    if i != 3 and i != 6 and i != 9:
-                        emb_idx += emb_indexs[emb_start]
-                        emb_start += 1
+                    # if i != 3 and i != 6 and i != 9:
+                        # emb_idx += emb_indexs[emb_start]
+                        # emb_start += 1
                 hs.append(h)
 
 
             h0 = hs[0]
 
-            emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            h = self.middle_block[0](h, emb)
-            emb_idx += emb_indexs[emb_start]
-            emb_start += 1
+            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+            # h = self.middle_block[0](h, emb)
+            # emb_idx += emb_indexs[emb_start]
+            # emb_start += 1
             
-            h, _, _ = self.middle_block[1](h, context)
-            emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            h = self.middle_block[2](h, emb)
-            emb_idx += emb_indexs[emb_start]
-            emb_start += 1
+            # h, _, _ = self.middle_block[1](h, context)
+            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+            # h = self.middle_block[2](h, emb)
+            # emb_idx += emb_indexs[emb_start]
+            # emb_start += 1
 
-            # h, _, _ = self.middle_block(h, emb, context)
+            h, _, _ = self.middle_block(h, emb, context)
         if control is not None:
             h += control[j]#.pop()
             j -= 1
         k = len(hs) - 1
         for i, module in enumerate(self.output_blocks):
-            emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
             # if only_mid_control or control is None:
             #     h = torch.cat([h, hs.pop()], dim=1)
             # else:
@@ -128,8 +129,8 @@ class ControlledUnetModel(UNetModel):
             k -= 1
             j -= 1
             h, _, _ = module(h, emb, context)
-            emb_idx += emb_indexs[emb_start]
-            emb_start += 1
+            # emb_idx += emb_indexs[emb_start]
+            # emb_start += 1
 
         return self.out(h), return_memory_x, x_in, h0
 
@@ -370,10 +371,11 @@ class ControlNet(nn.Module):
     def init_steps(self, timesteps):
         # step_keys = [951, 901, 851, 801, 751, 701, 651, 601, 551, 501, 451, 401, 351, 301, 251, 201, 151, 101, 51, 1]
         step_keys = np.linspace(951, 1, timesteps).astype(np.int32)
-        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False) for key in step_keys]
+        step_values = [timestep_embedding(torch.tensor([key], dtype=torch.long, device=torch.device("cuda"), requires_grad=False), self.model_channels, repeat_only=False).contiguous() for key in step_keys]
         with torch.no_grad():
             step_embed = [self.time_embed(val) for val in step_values]
-            # self.step_dict = step_embed #dict(zip(step_keys, step_embed))
+            self.step_dict = step_embed #dict(zip(step_keys, step_embed))
+            return
             res_modules = [] # emb layers
             emb_results = []
 
@@ -400,7 +402,7 @@ class ControlNet(nn.Module):
         emb_indexs = [320, 320, 640, 640, 1280, 1280, 1280, 1280, 1280, 1280]
         emb_idx = 0 # data_start_idx
         emb_start = 0 # list_idx
-        # emb = timesteps #self.step_dict[timesteps.item()]
+        emb = timesteps #self.step_dict[timesteps.item()]
 
         guided_hint = hint#self.input_hint_block(hint, None, None)
 
@@ -408,7 +410,7 @@ class ControlNet(nn.Module):
 
         h = x#.type(self.dtype)
         for i, (module, zero_conv) in enumerate(zip(self.input_blocks, self.zero_convs)):
-            emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
             if i == 0: # conv, no emb used
                 if memory_x is not None:
                     outs.append(h)
@@ -422,28 +424,28 @@ class ControlNet(nn.Module):
             elif i == 1:
                 if memory_x is not None: h = x_in
                 h, return_memory_x, x_in = module(h, emb, context, memory_x)
-                emb_idx += emb_indexs[emb_start]
-                emb_start += 1
+                # emb_idx += emb_indexs[emb_start]
+                # emb_start += 1
 
                 memory_x = None
             else:
                 h, _, _ = module(h, emb, context)
                 
-                if i != 3 and i != 6 and i != 9:
-                    emb_idx += emb_indexs[emb_start]
-                    emb_start += 1
+                # if i != 3 and i != 6 and i != 9:
+                    # emb_idx += emb_indexs[emb_start]
+                    # emb_start += 1
             
             outs.append(zero_conv(h, emb, context)[0])
 
-        emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-        h = self.middle_block[0](h, emb)
-        emb_idx += emb_indexs[emb_start]
-        emb_start += 1
+        # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+        # h = self.middle_block[0](h, emb)
+        # emb_idx += emb_indexs[emb_start]
+        # emb_start += 1
 
-        h, _, _ = self.middle_block[1](h, context)
-        emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-        h = self.middle_block[2](h, emb)
-        # h, _, _ = self.middle_block(h, emb, context)
+        # h, _, _ = self.middle_block[1](h, context)
+        # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
+        # h = self.middle_block[2](h, emb)
+        h, _, _ = self.middle_block(h, emb, context)
         outs.append(self.middle_block_out(h, emb, context)[0])
 
         return outs, return_memory_x, x_in
