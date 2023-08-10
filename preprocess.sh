@@ -10,9 +10,9 @@ cd ..
 /usr/bin/python3 edit_onnx.py
 cd onnxs
 
-trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
+trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable #--builderOptimizationLevel=5
 trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=22222 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph   --useSpinWait --noDataTransfers --sparsity=enable  --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  --staticPlugins=../lib/libnvinfer_plugin.so --builderOptimizationLevel=5 # 
-trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph  --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable
+trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph  --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable #--builderOptimizationLevel=5
 
 # int8
 # trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --int8 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --sparsity=enable
