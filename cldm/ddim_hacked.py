@@ -27,7 +27,7 @@ class Control_Diff_VAE(torch.nn.Module):
         # self.noise = torch.randn()
     
     def forward(self, img, ts, ts_df, 
-                c_cond_txt, c_hint, u_cond_txt, 
+                conds_all, c_hint, 
                 a_t, a_prev, sqrt_one_minus_at):
 
         # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
@@ -35,7 +35,7 @@ class Control_Diff_VAE(torch.nn.Module):
         # model_output = model_uncond + 9 * (model_t - model_uncond)
         #########################
         # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        model_t, model_uncond = self.control_model(img, ts, ts_df, c_cond_txt, u_cond_txt, c_hint)
+        model_t, model_uncond = self.control_model(img, ts, ts_df, conds_all, c_hint)
         model_output = model_uncond + 9 * (model_t - model_uncond)
 
         e_t = model_output
@@ -58,11 +58,12 @@ class Control_input_block(torch.nn.Module):
         self.transformer = transformer #CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").cuda().eval()
 
     def forward(self, c_hint, c_cond_txt, u_cond_txt):
-        c_hint_out, _, _ = self.input_block(c_hint, None)
-        c_cond_out = self.transformer(input_ids=c_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
-        u_cond_out = self.transformer(input_ids=u_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
-
-        return c_hint_out, c_cond_out, u_cond_out
+        c_hint_out = self.input_block(c_hint, None)
+        conds = torch.cat([c_cond_txt, u_cond_txt], dim=0)
+        # c_cond_out = self.transformer(input_ids=c_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
+        # u_cond_out = self.transformer(input_ids=u_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
+        conds_out = self.transformer(input_ids=conds, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
+        return c_hint_out, conds_out #c_cond_out, u_cond_out
 class DDIMSampler(object):
     def __init__(self, model, schedule="linear", **kwargs):
         super().__init__()
@@ -109,8 +110,9 @@ class DDIMSampler(object):
                 self.context_hint = model_hint.create_execution_context()
                 self.inputs_hint, self.outputs_hint, self.bindings_hint, self.stream_hint = allocate_buffers(model_hint)
                 self.c_hint_trt = torch.zeros([1, 320, 32, 48], dtype=torch.float32, device=self.device)
-                self.c_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
-                self.u_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
+                self.conds_all_trt = torch.zeros([2, 77, 768], dtype=torch.float32, device=self.device)
+                # self.c_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
+                # self.u_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -226,7 +228,7 @@ class DDIMSampler(object):
         ############
         # with open("hint_block.pkl", "wb+") as f:
         #     pickle.dump([c_hint, c_cond_txt, u_cond_txt], f)
-        #     raise
+            # raise
         if self.input_block_use_trt:
             self.bindings_hint[0] = int(c_hint.data_ptr())
             self.bindings_hint[1] = int(c_cond_txt.data_ptr())
@@ -236,13 +238,16 @@ class DDIMSampler(object):
                 stream_handle=self.stream_hint)
             cudart.cudaStreamSynchronize(self.stream_hint)
             memcopy_device_to_device(self.c_hint_trt.data_ptr(), self.outputs_hint[0].device, self.outputs_hint[0].nbytes)
-            memcopy_device_to_device(self.c_cond_txt_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
-            memcopy_device_to_device(self.u_cond_txt_trt.data_ptr(), self.outputs_hint[2].device, self.outputs_hint[2].nbytes)
+            memcopy_device_to_device(self.conds_all_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
+            # memcopy_device_to_device(self.c_cond_txt_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
+            # memcopy_device_to_device(self.u_cond_txt_trt.data_ptr(), self.outputs_hint[2].device, self.outputs_hint[2].nbytes)
             c_hint = self.c_hint_trt.contiguous()
-            c_cond_txt = self.c_cond_txt_trt.contiguous()
-            u_cond_txt = self.u_cond_txt_trt.contiguous()
+            conds_all = self.conds_all_trt.contiguous()
+            # c_cond_txt = self.c_cond_txt_trt.contiguous()
+            # u_cond_txt = self.u_cond_txt_trt.contiguous()
         else:
-            c_hint, c_cond_txt, u_cond_txt = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
+            # c_hint, c_cond_txt, u_cond_txt = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
+            c_hint, conds_all = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
 
         for i in range(total_steps - 1):
 
@@ -269,12 +274,12 @@ class DDIMSampler(object):
                 else: self.bindings[0] = self.outputs[0].device
                 self.bindings[1] = ts.data_ptr()
                 self.bindings[2] = ts_df.data_ptr()
-                self.bindings[3] = c_cond_txt.data_ptr()
+                self.bindings[3] = conds_all.data_ptr()
                 self.bindings[4] = c_hint.data_ptr()
-                self.bindings[5] = u_cond_txt.data_ptr()
-                self.bindings[6] = self.alphas[index].data_ptr()
-                self.bindings[7] = self.alphas_prev[index].data_ptr()
-                self.bindings[8] = self.sqrt_one_minus_alphas[index].data_ptr()         
+                # self.bindings[5] = u_cond_txt.data_ptr()
+                self.bindings[5] = self.alphas[index].data_ptr()
+                self.bindings[6] = self.alphas_prev[index].data_ptr()
+                self.bindings[7] = self.sqrt_one_minus_alphas[index].data_ptr()         
                 self.context.execute_async_v2(
                     bindings=self.bindings,
                     stream_handle=self.stream)
@@ -283,12 +288,12 @@ class DDIMSampler(object):
 
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
-                #     pickle.dump([img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index]], f)
+                #     pickle.dump([img, ts, ts_df, conds_all, c_hint, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index]], f)
                 # raise
                 # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
                 # print("end")
                 # raise
-                img = self.full_model(img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index])#, sigmas[index])
+                img = self.full_model(img, ts, ts_df, conds_all, c_hint, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
             if self.control_net_use_trt:
                 memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)

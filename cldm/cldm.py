@@ -52,87 +52,34 @@ class ControlledUnetModel(UNetModel):
 
             self.step_dict = emb_results
 
-    def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, memory_x=None, x_in=None, **kwargs):
+    def forward(self, x, timesteps=None, context=None, control=None, only_mid_control=False, **kwargs):
         hs = []
         j = len(control) - 1
-
-        emb_indexs = [320, 320, 640, 640, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 1280, 640, 640, 640, 320, 320, 320]
-        emb_idx = 0 # data_start_idx
-        emb_start = 0 # list_idx
 
         with torch.no_grad():
 
             emb = timesteps #self.step_dict[timesteps.item()]
             h = x
-            # for i, module in enumerate(self.input_blocks):
-            #     if memory_x is None:
-            #         if i == 1:
-            #             h, return_memory_x, x_in = module(h, emb, context)
-            #         else:
-            #             h, _, _ = module(h, emb, context)
-            #         hs.append(h)
-
-            #     else:
-            #         if i == 1: 
-            #             h = x_in
-            #             h, return_memory_x, x_in = module(h, emb, context, memory_x)
-            #             memory_x = None
-            #         elif i > 1:
-            #             h, _, _ = module(h, emb, context)
-            #         hs.append(h)
-            #####################
-
 
             for i, module in enumerate(self.input_blocks):
                 # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-                if i == 0:
-                    if memory_x is None: h, _, _ = module(h, emb, context)
-                elif i == 1:
-                    if memory_x is not None: h = x_in
-                    h, return_memory_x, x_in = module(h, emb, context, memory_x)
-                    # emb_idx += emb_indexs[emb_start]
-                    # emb_start += 1
-                    memory_x = None
-                else:
-                    h, _, _ = module(h, emb, context)
-                    # if i != 3 and i != 6 and i != 9:
-                        # emb_idx += emb_indexs[emb_start]
-                        # emb_start += 1
+                h = module(h, emb, context)
                 hs.append(h)
 
+            h = self.middle_block(h, emb, context)
 
-            h0 = hs[0]
+            if control is not None:
+                h += control[j]#.pop()
+                j -= 1
+            k = len(hs) - 1
+            for i, module in enumerate(self.output_blocks):
 
-            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            # h = self.middle_block[0](h, emb)
-            # emb_idx += emb_indexs[emb_start]
-            # emb_start += 1
-            
-            # h, _, _ = self.middle_block[1](h, context)
-            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            # h = self.middle_block[2](h, emb)
-            # emb_idx += emb_indexs[emb_start]
-            # emb_start += 1
+                h = torch.cat([h, hs[k] + control[j]], dim=1)
+                k -= 1
+                j -= 1
+                h = module(h, emb, context)
 
-            h, _, _ = self.middle_block(h, emb, context)
-        if control is not None:
-            h += control[j]#.pop()
-            j -= 1
-        k = len(hs) - 1
-        for i, module in enumerate(self.output_blocks):
-            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            # if only_mid_control or control is None:
-            #     h = torch.cat([h, hs.pop()], dim=1)
-            # else:
- 
-            h = torch.cat([h, hs[k] + control[j]], dim=1)
-            k -= 1
-            j -= 1
-            h, _, _ = module(h, emb, context)
-            # emb_idx += emb_indexs[emb_start]
-            # emb_start += 1
-
-        return self.out(h), return_memory_x, x_in, h0
+            return self.out(h)
 
 
 class ControlNet(nn.Module):
@@ -396,59 +343,30 @@ class ControlNet(nn.Module):
     def make_zero_conv(self, channels):
         return TimestepEmbedSequential(zero_module(conv_nd(self.dims, channels, channels, 1, padding=0)))
 
-    def forward(self, x, hint, timesteps, context, memory_x=None, x_in=None, **kwargs): # context 1, 77, 768
+    def forward(self, x, hint, timesteps, context, **kwargs): # context 1, 77, 768
         # t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-        # emb = self.time_embed(t_emb)
-        emb_indexs = [320, 320, 640, 640, 1280, 1280, 1280, 1280, 1280, 1280]
-        emb_idx = 0 # data_start_idx
-        emb_start = 0 # list_idx
-        emb = timesteps #self.step_dict[timesteps.item()]
-
+        emb = timesteps
         guided_hint = hint#self.input_hint_block(hint, None, None)
 
         outs = []
 
         h = x#.type(self.dtype)
         for i, (module, zero_conv) in enumerate(zip(self.input_blocks, self.zero_convs)):
-            # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-            if i == 0: # conv, no emb used
-                if memory_x is not None:
-                    outs.append(h)
-                    guided_hint = None
-                    continue
-                else:
-                    h, _, _ = module(h, emb, context)
-                    h += guided_hint
-                    guided_hint = None
-            
-            elif i == 1:
-                if memory_x is not None: h = x_in
-                h, return_memory_x, x_in = module(h, emb, context, memory_x)
-                # emb_idx += emb_indexs[emb_start]
-                # emb_start += 1
 
-                memory_x = None
+
+            if guided_hint is not None:
+                h = module(h, emb, context)
+                h += guided_hint
+                guided_hint = None
             else:
-                h, _, _ = module(h, emb, context)
-                
-                # if i != 3 and i != 6 and i != 9:
-                    # emb_idx += emb_indexs[emb_start]
-                    # emb_start += 1
-            
-            outs.append(zero_conv(h, emb, context)[0])
+                h = module(h, emb, context)
 
-        # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-        # h = self.middle_block[0](h, emb)
-        # emb_idx += emb_indexs[emb_start]
-        # emb_start += 1
+            outs.append(zero_conv(h, emb, context))
 
-        # h, _, _ = self.middle_block[1](h, context)
-        # emb = timesteps[:, emb_idx:emb_idx + emb_indexs[emb_start], ...]
-        # h = self.middle_block[2](h, emb)
-        h, _, _ = self.middle_block(h, emb, context)
-        outs.append(self.middle_block_out(h, emb, context)[0])
+        h = self.middle_block(h, emb, context)
+        outs.append(self.middle_block_out(h, emb, context))
 
-        return outs, return_memory_x, x_in
+        return outs
 
 
 class ControlLDM(LatentDiffusion):
@@ -487,13 +405,23 @@ class ControlLDM(LatentDiffusion):
         control = control.to(memory_format=torch.contiguous_format).float()
         return x, dict(c_crossattn=[c], c_concat=[control])
 
-    def forward(self, x_noisy, ts, ts_df, cond_txt, u_cond_txt, hint):#, *args, **kwargs
+    def forward(self, x_noisy, ts, ts_df, conds_all, hint):#, *args, **kwargs
+        
+        noisy_2 = torch.cat([x_noisy, x_noisy], dim=0)
+        hint_2 = torch.cat([hint, hint], dim=0)
+        ts_2 = torch.cat([ts, ts], dim=0)
+        ts_df_2 = torch.cat([ts_df, ts_df], dim=0)
+        context_2 = conds_all #torch.cat([cond_txt, u_cond_txt], dim=0)
 
-        control, return_memory_x, x_in = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
-        eps, return_memory_x_df, x_in_df, h0 = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+        controls = self.control_model(x=noisy_2, hint=hint_2, timesteps=ts_2, context=context_2)
+        epss = self.model.diffusion_model(x=noisy_2, timesteps=ts_df_2, context=context_2, control=controls, only_mid_control=self.only_mid_control)
+        eps, eps_uncond = torch.split(epss, 1, dim=0)
 
-        control, _, _ = self.control_model(x=control[0], hint=hint, timesteps=ts, context=u_cond_txt, memory_x=return_memory_x, x_in=x_in)
-        eps_uncond, _, _, _ = self.model.diffusion_model(x=h0, timesteps=ts_df, context=u_cond_txt, control=control, only_mid_control=self.only_mid_control, memory_x=return_memory_x_df, x_in=x_in_df)
+        # control = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=cond_txt)
+        # eps = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+
+        # control_uncond = self.control_model(x=x_noisy, hint=hint, timesteps=ts, context=u_cond_txt)
+        # eps_uncond = self.model.diffusion_model(x=x_noisy, timesteps=ts_df, context=u_cond_txt, control=control_uncond, only_mid_control=self.only_mid_control)
 
         return eps, eps_uncond
 
