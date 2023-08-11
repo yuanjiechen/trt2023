@@ -83,6 +83,9 @@ nvinfer1::DimsExprs GroupNormalizationPlugin::getOutputDimensions(
         // Input (from previous layer), scale and bias are the three inputs to the plugin.
         PLUGIN_VALIDATE(nbInputs == 3);
         PLUGIN_VALIDATE(index == 0);
+        DimsExprs output(inputs[0]);
+        output.d[0] = exprBuilder.constant(1);
+
         return inputs[0];
     }
     catch (std::exception const& e)
@@ -316,39 +319,42 @@ void GroupNormalizationPlugin::configurePlugin(nvinfer1::DynamicPluginTensorDesc
 
         // Set tensor descriptor in a way that cudnnBatchNorm will perform Group Normalization.
         if (inputType == nvinfer1::DataType::kFLOAT){
-        PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
-            CUDNN_TENSOR_NCHW,                                     // tensor format
-            CUDNN_DATA_FLOAT,                                      // type
-            1,                                                     // Batchsize
-            batchSize * mNbGroups,                                 // Channels
-            groupSize,                                             // Height
-            mChannelVolume                                         // Width
-            ));
+            PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
+                CUDNN_TENSOR_NCHW,                                     // tensor format
+                CUDNN_DATA_FLOAT,                                      // type
+                1,                                                     // Batchsize
+                batchSize * mNbGroups,                                 // Channels
+                groupSize,                                             // Height
+                mChannelVolume                                         // Width
+                ));
+
+            PLUGIN_CUDNNASSERT(cudnnDeriveBNTensorDescriptor(mBNTensorDesc, mTensorDesc, CUDNN_BATCHNORM_SPATIAL));
         }
         else if (inputType == nvinfer1::DataType::kHALF){
-        PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
-            CUDNN_TENSOR_NCHW,                                     // tensor format
-            CUDNN_DATA_HALF,                                      // type
-            1,                                                     // Batchsize
-            batchSize * mNbGroups,                                 // Channels
-            groupSize,                                             // Height
-            mChannelVolume                                         // Width
-            ));
-        
-        PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc2, // descriptor
-            CUDNN_TENSOR_NCHW,                                     // tensor format
-            CUDNN_DATA_FLOAT,                                      // type
-            1,                                                     // Batchsize
-            batchSize * mNbGroups,                                 // Channels
-            groupSize,                                             // Height
-            mChannelVolume                                         // Width
-            ));
+            PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
+                CUDNN_TENSOR_NCHW,                                     // tensor format
+                CUDNN_DATA_HALF,                                      // type
+                1,                                                     // Batchsize
+                batchSize * mNbGroups,                                 // Channels
+                groupSize,                                             // Height
+                mChannelVolume                                         // Width
+                ));
+            
+            PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc2, // descriptor
+                CUDNN_TENSOR_NCHW,                                     // tensor format
+                CUDNN_DATA_FLOAT,                                      // type
+                1,                                                     // Batchsize
+                batchSize * mNbGroups,                                 // Channels
+                groupSize,                                             // Height
+                mChannelVolume                                         // Width
+                ));
+                PLUGIN_CUDNNASSERT(cudnnDeriveBNTensorDescriptor(mBNTensorDesc, mTensorDesc2, CUDNN_BATCHNORM_SPATIAL));
         }
         else {
             mTensorDesc = nullptr;
         }
         
-        PLUGIN_CUDNNASSERT(cudnnDeriveBNTensorDescriptor(mBNTensorDesc, mTensorDesc2, CUDNN_BATCHNORM_SPATIAL));
+        
     }
     catch (std::exception const& e)
     {

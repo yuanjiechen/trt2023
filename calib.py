@@ -7,8 +7,8 @@ from calibrator import MyCalibrator
 
 cachefile = "./int8.cache"
 n_calib = 1
-path = "./looped_data"
-
+path = "../2000_final"
+ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
 logger = trt.Logger(trt.Logger.INFO)
 trt.init_libnvinfer_plugins(logger, '')
 builder = trt.Builder(logger)
@@ -20,7 +20,7 @@ parser = trt.OnnxParser(network, logger)
 
 onnx_path = os.path.realpath("./onnxs/controlnet_one_loop_folded.onnx")
 engine_path = os.path.realpath("./controlnet_one_loop_fp16.engine")
-calib_count = 280
+calib_count = 27986
 
 with open(onnx_path, "rb") as f:
     print(parser.parse_from_file(onnx_path))
@@ -32,6 +32,12 @@ if network.num_outputs == 0:
 inputs = [network.get_input(i) for i in range(network.num_inputs)]
 outputs = [network.get_output(i) for i in range(network.num_outputs)]
 
+# for i in range(network.num_layers):
+#     layer = network.get_layer(i)
+#     if "InstanceNormalization" in layer.name:
+#         layer.precision = trt.DataType.HALF
+#         layer.set_output_type(0, trt.DataType.HALF)
+#         print(layer.type)
 
 print("Network Description")
 for input in inputs:
@@ -44,7 +50,8 @@ assert batch_size > 0
 config.set_flag(trt.BuilderFlag.FP16)
 config.set_flag(trt.BuilderFlag.INT8)
 config.set_flag(trt.BuilderFlag.SPARSE_WEIGHTS)
-config.int8_calibrator = MyCalibrator(calib_count, "../fix_seed", "int8.cache")
+# config.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
+config.int8_calibrator = MyCalibrator(calib_count, path, "int8.cache")
 config.max_aux_streams = 10
 
 with builder.build_serialized_network(network, config) as engine, open(engine_path, "wb+") as f:
