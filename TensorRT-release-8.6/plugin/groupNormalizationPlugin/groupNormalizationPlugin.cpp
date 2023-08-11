@@ -189,11 +189,11 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     {
     case DataType::kFLOAT: {
         auto* output = static_cast<float*>(outputs[0]);
-        return scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
+        return 0; //scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
     }
     case DataType::kHALF: {
         auto* output = static_cast<half*>(outputs[0]);
-        return scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
+        return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
     }
     default: return STATUS_FAILURE;
     }

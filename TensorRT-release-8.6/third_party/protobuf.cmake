@@ -20,7 +20,7 @@ include(ExternalProject)
 # with the include dir and binaries imported
 macro(configure_protobuf VERSION)
     set(protobufPackage "protobuf-cpp-${VERSION}.tar.gz")
-    set(Protobuf_PKG_URL "/home/player/ControlNet/TensorRT-release-8.6/third_party/protobuf/protobuf-cpp-3.20.1.tar.gz")
+    set(Protobuf_PKG_URL "/home/player/trt2023/TensorRT-release-8.6/third_party/protobuf/protobuf-cpp-3.20.1.tar.gz")
     set(Protobuf_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR})
     set(Protobuf_TARGET third_party.protobuf)
 
