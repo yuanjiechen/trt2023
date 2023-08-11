@@ -288,7 +288,7 @@ class ResBlock(TimestepBlock):
         #     h = out_rest(h)
         # else:
         # if self.quant_add == False:
-        h.add_(emb_out) #emb
+        h.add_(emb_out) #emb_out
         h = self.out_layers(h)
         h.add_(self.skip_connection(x))
         
