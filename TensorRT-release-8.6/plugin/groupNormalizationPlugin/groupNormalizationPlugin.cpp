@@ -119,7 +119,7 @@ void GroupNormalizationPlugin::detachFromContext() noexcept
     {   
         // std::cout << "destroy start" << endl;
         PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc));
-        PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc2));
+        // PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc2));
         PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mBNTensorDesc));
         mCudnnHandle = nullptr;
         // std::cout << "destroy end" << endl;
@@ -189,10 +189,15 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     {
     case DataType::kFLOAT: {
         auto* output = static_cast<float*>(outputs[0]);
+        // std:cout << "end enqueue" << endl;
         return 0; //scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
     }
     case DataType::kHALF: {
         auto* output = static_cast<half*>(outputs[0]);
+        return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
+    }
+    case DataType::kINT8: {
+        auto* output = static_cast<int8_t*>(outputs[0]);
         return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
     }
     default: return STATUS_FAILURE;
@@ -238,8 +243,8 @@ bool GroupNormalizationPlugin::supportsFormatCombination(
 
 void GroupNormalizationPlugin::terminate() noexcept
 {
-    mBnScales.reset();
-    mBnBias.reset();
+    // mBnScales.reset();
+    // mBnBias.reset();
 }
 
 void GroupNormalizationPlugin::destroy() noexcept
@@ -316,7 +321,7 @@ void GroupNormalizationPlugin::configurePlugin(nvinfer1::DynamicPluginTensorDesc
         // Calculate size of each group
         int32_t groupSize = nbChannels / mNbGroups;
         mChannelVolume = pluginInternal::volume(inputDims, /*start*/ 2, /*stop*/ inputDims.nbDims);
-
+        // std::cout << int32_t(inputType) << endl;
         // Set tensor descriptor in a way that cudnnBatchNorm will perform Group Normalization.
         if (inputType == nvinfer1::DataType::kFLOAT){
             PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
@@ -351,9 +356,19 @@ void GroupNormalizationPlugin::configurePlugin(nvinfer1::DynamicPluginTensorDesc
                 PLUGIN_CUDNNASSERT(cudnnDeriveBNTensorDescriptor(mBNTensorDesc, mTensorDesc2, CUDNN_BATCHNORM_SPATIAL));
         }
         else {
-            mTensorDesc = nullptr;
+            // std::cout << int32_t(inputType) << endl;
+            PLUGIN_CUDNNASSERT(cudnnSetTensor4dDescriptor(mTensorDesc, // descriptor
+                CUDNN_TENSOR_NCHW,                                     // tensor format
+                CUDNN_DATA_FLOAT,                                      // type
+                1,                                                     // Batchsize
+                batchSize * mNbGroups,                                 // Channels
+                groupSize,                                             // Height
+                mChannelVolume                                         // Width
+                ));
+
+            PLUGIN_CUDNNASSERT(cudnnDeriveBNTensorDescriptor(mBNTensorDesc, mTensorDesc, CUDNN_BATCHNORM_SPATIAL));
         }
-        
+        // std::cout << int32_t(inputType) << "  end config" << endl;
         
     }
     catch (std::exception const& e)

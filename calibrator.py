@@ -59,10 +59,16 @@ class MyCalibrator(trt.IInt8EntropyCalibrator2):
 
     def get_batch(self, nameList=None, inputNodeName=None):  # do NOT change name
         if self.count < self.nCalibration:
-            files = list(Path(self.file_path).glob("*.pkl"))[self.count]
-            self.count += 1
-            with open(files, "rb") as f:
-                inputs = pickle.load(f)
+            
+            while True:
+                try:
+                    files = list(Path(self.file_path).glob("*.pkl"))[self.count]
+                    self.count += 1
+                    with open(files, "rb") as f:
+                        inputs = pickle.load(f)
+                    break
+                except BaseException as e:
+                    print(e, self.count)
             
             for i, inp in enumerate(inputs):
                 # torch.Tensor.contiguous

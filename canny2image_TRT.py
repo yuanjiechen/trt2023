@@ -68,7 +68,7 @@ class hackathon():
             control = torch.from_numpy(detected_map).float().cuda() / 255.0
             control = control.unsqueeze(0)
             control = einops.rearrange(control, 'b h w c -> b c h w')
-            # seed = 1935962553
+
             if seed == -1:
                 seed = random.randint(0, 65535)
             seed_everything(seed)

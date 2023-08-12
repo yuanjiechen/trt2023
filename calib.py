@@ -7,7 +7,7 @@ from calibrator import MyCalibrator
 
 cachefile = "./int8.cache"
 n_calib = 1
-path = "../2000_final"
+path = "../2000_final_with_opt"
 ctypes.cdll.LoadLibrary("./lib/libnvinfer_plugin.so")
 logger = trt.Logger(trt.Logger.INFO)
 trt.init_libnvinfer_plugins(logger, '')
@@ -20,7 +20,7 @@ parser = trt.OnnxParser(network, logger)
 
 onnx_path = os.path.realpath("./onnxs/controlnet_one_loop_folded.onnx")
 engine_path = os.path.realpath("./controlnet_one_loop_fp16.engine")
-calib_count = 27986
+calib_count = 25108
 
 with open(onnx_path, "rb") as f:
     print(parser.parse_from_file(onnx_path))
