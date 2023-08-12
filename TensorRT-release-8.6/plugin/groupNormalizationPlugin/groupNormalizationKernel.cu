@@ -33,6 +33,7 @@ __global__ void scaleShiftChannelsInplaceKernel(T* inOut, const int ld, const T*
     // blockIdx.z = batch
     // blockIdx.y = channel
     // blockIdx.x = block per col
+    // ld = 3840
     const T b = beta[blockIdx.y];
     const T g = gamma[blockIdx.y];
 
@@ -53,10 +54,10 @@ cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const 
 
     constexpr int TPB = 256;
     const int colBlocks = (channelVolume + TPB - 1) / TPB;
-    const dim3 grid(colBlocks, C, B);
+    const dim3 grid(colBlocks, C, B); // 16, 32, 2
     // std::cout << "before cuda kernel\n";
     // std::cout << sizeof(T) << endl;
-    scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, beta, gamma);
+    scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, beta, gamma); // (16, 32, 2) 256
     // cudaStreamSynchronize(stream);
     // cudaError_t err = cudaPeekAtLastError();
     // std::cout  << err << "    after cuda kernel\n";

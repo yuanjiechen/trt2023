@@ -118,9 +118,9 @@ void GroupNormalizationPlugin::detachFromContext() noexcept
     try
     {   
         // std::cout << "destroy start" << endl;
-        PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc));
+        // PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc));
         // PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mTensorDesc2));
-        PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mBNTensorDesc));
+        // PLUGIN_CUDNNASSERT(cudnnDestroyTensorDescriptor(mBNTensorDesc));
         mCudnnHandle = nullptr;
         // std::cout << "destroy end" << endl;
     }
