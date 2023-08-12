@@ -26,6 +26,21 @@ for node in graph.nodes:
         node.attrs["eps"] = node.attrs["epsilon"]
         node.attrs["num_groups"] = 32
         node.op = "GroupNormalizationPlugin2"
+        mul = node.o().o()
+        add = node.o().o().o()
+        sig_conv = node.o().o().o().o()
+        if sig_conv.op == "Sigmoid":
+            sig_mul = node.o().o().o().o(1, 0)
+
+        node.inputs[1] = mul.inputs[1]
+        node.inputs[2] = add.inputs[1]
+        sig_conv.inputs[0] = node.o().outputs[0]
+        if sig_conv.op == "Sigmoid":
+            sig_mul.inputs[0] = node.o().outputs[0]
+        mul.inputs.clear()
+        add.outputs.clear()
+        # print(node.o().o().o().o().op)
+        # input()
     #     node.inputs[0] = node.i().inputs[0]
     #     node.outputs[0] = node.o().outputs[0]
 

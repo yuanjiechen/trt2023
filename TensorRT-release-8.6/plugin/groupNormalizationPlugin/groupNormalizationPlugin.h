@@ -33,7 +33,7 @@ namespace plugin
 {
 
 template <typename T>
-cudaError_t scaleShiftChannelsInplace(T* inOut, int32_t const B, int32_t const C, int32_t const channelVolume,
+cudaError_t scaleShiftChannelsInplace(T* inOut, int32_t const B, int32_t const C, int32_t const channelVolume, const int skips,
     T const* beta, T const* gamma, cudaStream_t stream);
 
 class GroupNormalizationPlugin final : public nvinfer1::IPluginV2DynamicExt

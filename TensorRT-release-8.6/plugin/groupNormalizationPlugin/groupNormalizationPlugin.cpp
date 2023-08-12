@@ -83,8 +83,8 @@ nvinfer1::DimsExprs GroupNormalizationPlugin::getOutputDimensions(
         // Input (from previous layer), scale and bias are the three inputs to the plugin.
         PLUGIN_VALIDATE(nbInputs == 3);
         PLUGIN_VALIDATE(index == 0);
-        DimsExprs output(inputs[0]);
-        output.d[0] = exprBuilder.constant(1);
+        // DimsExprs output(inputs[0]);
+        // output.d[0] = exprBuilder.constant(1);
 
         return inputs[0];
     }
@@ -181,8 +181,10 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     // std::cout<< int32_t(inputDesc[0].type)<< "   enqueue cudnn\n";
     // Apply an additional scale and bias on each channel.
     nvinfer1::Dims inputDims = inputDesc[0].dims;
+    nvinfer1::Dims paramDims = inputDesc[1].dims;
     int32_t batchSize = inputDims.d[0];
     int32_t nbChannels = inputDims.d[1]; 
+    int32_t skips = paramDims.d[0]; // nbChannels;
     // auto* output = static_cast<float*>(outputs[0]);
 
     switch (inputDesc[0].type)
@@ -190,16 +192,16 @@ int32_t GroupNormalizationPlugin::enqueue(nvinfer1::PluginTensorDesc const* inpu
     case DataType::kFLOAT: {
         auto* output = static_cast<float*>(outputs[0]);
         // std:cout << "end enqueue" << endl;
-        return 0; //scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
+        return scaleShiftChannelsInplace<float>(output, batchSize, nbChannels, mChannelVolume, skips, static_cast<float const*>(inputs[2]), static_cast<float const*>(inputs[1]), stream);
     }
     case DataType::kHALF: {
         auto* output = static_cast<half*>(outputs[0]);
-        return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
+        return scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, skips, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
     }
-    case DataType::kINT8: {
-        auto* output = static_cast<int8_t*>(outputs[0]);
-        return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
-    }
+    // case DataType::kINT8: {
+    //     auto* output = static_cast<int8_t*>(outputs[0]);
+    //     return 0; //scaleShiftChannelsInplace<half>(output, batchSize, nbChannels, mChannelVolume, static_cast<half const*>(inputs[2]), static_cast<half const*>(inputs[1]), stream);
+    // }
     default: return STATUS_FAILURE;
     }
 

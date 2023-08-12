@@ -26,7 +26,7 @@ namespace plugin
 {
 
 template <typename T, unsigned TPB>
-__global__ void scaleShiftChannelsInplaceKernel(T* inOut, const int ld, const T* beta, const T* gamma)
+__global__ void scaleShiftChannelsInplaceKernel(T* inOut, const int ld, const int skips, const T* beta, const T* gamma)
 {
     // grid is blocks x C x B
     // ld should be H*W
@@ -34,12 +34,16 @@ __global__ void scaleShiftChannelsInplaceKernel(T* inOut, const int ld, const T*
     // blockIdx.y = channel
     // blockIdx.x = block per col
     // ld = 3840
-    const T b = beta[blockIdx.y];
-    const T g = gamma[blockIdx.y];
 
-    const int offset = (blockIdx.z * gridDim.y + blockIdx.y) * ld;
-
+    // const T b = beta[blockIdx.y * skips];
+    // const T g = gamma[blockIdx.y * skips];
+    const int skip_offset = blockIdx.y * ld;
+    const int offset = blockIdx.z * gridDim.y * ld + skip_offset; //(blockIdx.z * gridDim.y + blockIdx.y) * ld;
+    const int data_offset = (skip_offset + tx) / skips
     const int tx = blockIdx.x * TPB + threadIdx.x;
+
+    const T b = beta[data_offset];
+    const T g = gamma[data_offset];
 
     if (tx < ld)
     {
@@ -48,16 +52,17 @@ __global__ void scaleShiftChannelsInplaceKernel(T* inOut, const int ld, const T*
 }
 
 template <typename T>
-cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const int channelVolume, const T* beta,
+cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const int channelVolume, const int skips, const T* beta,
     const T* gamma, cudaStream_t stream)
 {
 
     constexpr int TPB = 256;
     const int colBlocks = (channelVolume + TPB - 1) / TPB;
     const dim3 grid(colBlocks, C, B); // 16, 32, 2
+    const int skips_ = channelVolume * C / skips;
     // std::cout << "before cuda kernel\n";
     // std::cout << sizeof(T) << endl;
-    scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, beta, gamma); // (16, 32, 2) 256
+    scaleShiftChannelsInplaceKernel<T, TPB><<<grid, TPB, 0, stream>>>(inOut, channelVolume, skips_, beta, gamma); // (16, 32, 2) 256
     // cudaStreamSynchronize(stream);
     // cudaError_t err = cudaPeekAtLastError();
     // std::cout  << err << "    after cuda kernel\n";
@@ -65,10 +70,10 @@ cudaError_t scaleShiftChannelsInplace(T* inOut, const int B, const int C, const 
     return cudaPeekAtLastError();
 }
 
-template cudaError_t scaleShiftChannelsInplace<float>(float* inOut, const int B, const int C, const int channelVolume, const float* beta,
+template cudaError_t scaleShiftChannelsInplace<float>(float* inOut, const int B, const int C, const int channelVolume, const int skips, const float* beta,
     const float* gamma, cudaStream_t stream);
 
-template cudaError_t scaleShiftChannelsInplace<half>(half* inOut, const int B, const int C, const int channelVolume, const half* beta,
+template cudaError_t scaleShiftChannelsInplace<half>(half* inOut, const int B, const int C, const int channelVolume, const int skips, const half* beta,
     const half* gamma, cudaStream_t stream);
 } /* plugin */
 } /* nvinfer1 */
