@@ -11,7 +11,7 @@ cd ..
 cd onnxs
 
 trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable #--builderOptimizationLevel=5
-trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=22222 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10  --useSpinWait --noDataTransfers --sparsity=enable  --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  --staticPlugins=../lib/libnvinfer_plugin.so --builderOptimizationLevel=5 # 
+trtexec --onnx=./controlnet_one_loop_folded.onnx --exportProfile=./profile_one.json --exportLayerInfo=./layerinfo_one.json --profilingVerbosity=detailed --workspace=22222 --fp16 --saveEngine=./controlnet_one_loop_fp16.engine --infStreams=4 --maxAuxStreams=10  --useSpinWait --noDataTransfers --sparsity=enable  --staticPlugins=../lib/libnvinfer_plugin.so --builderOptimizationLevel=5  # --layerOutputTypes=*:fp16 --precisionConstraints=obey --layerPrecisions=*:fp16  
 trtexec --onnx=./hint_block_folded.onnx --workspace=16384 --fp16 --saveEngine=./hint_block_fp16.engine --infStreams=4 --maxAuxStreams=10 --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable #--builderOptimizationLevel=5
 
 # int8
