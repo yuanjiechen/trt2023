@@ -19,8 +19,9 @@ for node in graph.nodes:
         
         node.outputs.clear()
         node.inputs.clear()
-
-    elif node.op == "InstanceNormalization":
+        
+for node in graph.nodes:
+    if node.op == "InstanceNormalization":
     #     i = node.i()
     #     o = node.o()
         node.attrs["eps"] = node.attrs["epsilon"]
@@ -33,14 +34,18 @@ for node in graph.nodes:
         res_2 = node.o()
         sig_conv = node.o().o().o().o()
         if sig_conv.op == "Sigmoid":
-            sig_mul = node.o().o().o().o(1, 0)
+            node.attrs["bSwish"] = 1
+            next_conv = node.o().o().o().o().o().o()
+            # sig_mul = node.o().o().o().o(1, 0)
 
         node.inputs[0] = node.i().i().outputs[0]
         node.inputs[1] = mul.inputs[1]
         node.inputs[2] = add.inputs[1]
-        sig_conv.inputs[0] = node.outputs[0]
+        
         if sig_conv.op == "Sigmoid":
-            sig_mul.inputs[0] = node.outputs[0]
+            next_conv.inputs[0] = node.outputs[0]
+        elif sig_conv.op == "Conv":
+            sig_conv.inputs[0] = node.outputs[0]
         mul.inputs.clear()
         add.outputs.clear()
         res_1.inputs.clear()

@@ -18,10 +18,16 @@
 #include "groupNormKernel.h"
 
 #include <cub/cub.cuh>
+#include <cuda_fp16.h>
 
 static inline __device__ __host__ float sigmoid(float x)
 {
     return 1.F / (1.F + expf(-x));
+}
+
+static inline __device__  half sigmoid(half x)
+{
+    return half(1.) / (half(1.) + hexp(-x));
 }
 
 struct GroupSums
@@ -86,12 +92,12 @@ __global__ void groupNormNHWCSumKernel(GroupNormNHWCParams params)
         }
 
         // Extract the two half values.
-        float2 f2 = __half22float2(h2);
+        // float2 f2 = __half22float2(h2);
 
         // Update the sum.
-        sum += f2.x + f2.y;
+        sum += __half2float(h2.x + h2.y);
         // Update the sum of squares.
-        sumSq += f2.x * f2.x + f2.y * f2.y;
+        sumSq += __half2float(h2.x * h2.x + h2.y * h2.y);
     }
 
     // The group that thread works on and the channel in the group (modulus).
@@ -197,7 +203,8 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
     int32_t hwBegin = blockIdx.y * params.hwPerBlock;
     // The last activation loaded by that block.
     int32_t hwEnd = min(hwBegin + params.hwPerBlock, params.hw);
-
+    __half2 h2(0, 0);
+    float2 f2 = __half22float2(h2);
     // Iterate over the activations to compute the sums.
     for (int32_t hwi = hwBegin; hwi < hwEnd; ++hwi)
     {
@@ -205,34 +212,34 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
         int64_t offset = (int64_t) ni * params.hwc + hwi * params.c + ci;
 
         // Fetch two channels per thread.
-        __half2 h2(0, 0);
+        // __half2 h2(0, 0);
         if (ci < params.c)
         {
             h2 = *reinterpret_cast<__half2 const*>(&params.src[offset]);
         }
 
         // Extract the two half values.
-        float2 f2 = __half22float2(h2);
+        f2 = __half22float2(h2);
 
         // Normalize the channels.
         f2.x = (f2.x - mean) * invStdDev;
         f2.y = (f2.y - mean) * invStdDev;
 
         // Scale by gamma and add beta.
-        f2.x = gammaF2.x * f2.x + betaF2.x;
-        f2.y = gammaF2.y * f2.y + betaF2.y;
+        h2.x = __float2half(gammaF2.x * f2.x + betaF2.x);
+        h2.y = __float2half(gammaF2.y * f2.y + betaF2.y);
 
         // Apply Swish if needed.
         if (params.withSwish)
         {
-            f2.x = f2.x * sigmoid(f2.x);
-            f2.y = f2.y * sigmoid(f2.y);
+            h2.x = h2.x * sigmoid(h2.x);
+            h2.y = h2.y * sigmoid(h2.y);
         }
 
         // Store the scaled values.
         if (ci < params.c)
         {
-            *reinterpret_cast<__half2*>(&params.dst[offset]) = __float22half2_rn(f2);
+            *reinterpret_cast<__half2*>(&params.dst[offset]) = h2; //__float22half2_rn(f2);
         }
     }
 }
