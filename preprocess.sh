@@ -8,6 +8,14 @@ polygraphy surgeon sanitize --fold-constants hint_block.onnx -o hint_block_folde
 
 cd ..
 /usr/bin/python3 edit_onnx.py
+cd TensorRT-8.5.3
+mkdir build
+cd build
+cmake .. -DTRT_LIB_DIR=/home/player/TensorRT-8.6.1.6/lib
+make clean
+make -j
+cp libnvinfer* ../../lib/
+cd ../..
 cd onnxs
 
 trtexec --onnx=./controlnet_vae_folded.onnx --workspace=16384 --fp16 --saveEngine=./controlnet_vae_fp16.engine --infStreams=4 --maxAuxStreams=10 --useCudaGraph --precisionConstraints=prefer --layerPrecisions=*:fp16 --sparsity=enable #--builderOptimizationLevel=5
