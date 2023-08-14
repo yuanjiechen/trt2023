@@ -43,7 +43,7 @@ for i in range(20):
     new_path = "./pred/bird_"+ str(i) + ".jpg"
     cv2.imwrite(new_path, new_img[0])
     # generate the base_img by running the pytorch fp32 pipeline (origin code in canny2image_TRT.py)
-    # base_path = f"./ground_truth/bird_{i}.jpg"
-    # score = PD(base_path, new_path)
-    # print("score is: ", score)
+    base_path = f"./ground_truth/bird_{i}.jpg"
+    score = PD(base_path, new_path)
+    print("score is: ", score)
 

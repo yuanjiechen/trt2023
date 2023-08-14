@@ -270,8 +270,8 @@ class DDIMSampler(object):
                 # self.context.set_tensor_address("24648", self.outputs[0].device)
                 # self.context.execute_async_v3(self.stream)
 
-                if i == 0: self.bindings[0] = img.data_ptr()
-                else: self.bindings[0] = self.outputs[0].device
+                self.bindings[0] = img.data_ptr()
+                # else: self.bindings[0] = self.outputs[0].device
                 self.bindings[1] = ts.data_ptr()
                 self.bindings[2] = ts_df.data_ptr()
                 self.bindings[3] = conds_all.data_ptr()
@@ -284,7 +284,8 @@ class DDIMSampler(object):
                     bindings=self.bindings,
                     stream_handle=self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
-                
+                memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+                img = self.out_tensor  
 
             else:
                 # with open("controlnet_one_loop.pkl", "wb+") as f:
@@ -295,9 +296,9 @@ class DDIMSampler(object):
                 # raise
                 img = self.full_model(img, ts, ts_df, conds_all, c_hint, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index])#, sigmas[index])
             #########################
-            if self.control_net_use_trt:
-                memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
-                img = self.out_tensor   
+            # if self.control_net_use_trt:
+            #     memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
+            #     img = self.out_tensor   
 
 
         return img #, intermediates

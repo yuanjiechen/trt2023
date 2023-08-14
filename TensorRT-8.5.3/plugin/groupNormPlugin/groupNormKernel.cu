@@ -186,10 +186,15 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
 
     // Load gamma/beta.
     float2 gammaF2, betaF2;
+    __half2 gammaH2(0, 0), betaH2(0, 0);
     if (ci < params.c)
     {
         gammaF2 = *reinterpret_cast<float2 const*>(&params.gamma[ci]);
         betaF2 = *reinterpret_cast<float2 const*>(&params.beta[ci]);
+
+        gammaH2 = __float22half2_rn(gammaF2);
+        betaH2 = __float22half2_rn(betaF2);
+
     }
 
     // Compute the mean.
@@ -219,15 +224,16 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
         }
 
         // Extract the two half values.
-        f2 = __half22float2(h2);
-
+        // f2 = __half22float2(h2);
+        half mean_ = __float2half(mean);
+        half invStdDev_ = __float2half(invStdDev);
         // Normalize the channels.
-        f2.x = (f2.x - mean) * invStdDev;
-        f2.y = (f2.y - mean) * invStdDev;
+        h2.x = (h2.x - mean_) * invStdDev_;
+        h2.y = (h2.y - mean_) * invStdDev_;
 
         // Scale by gamma and add beta.
-        h2.x = __float2half(gammaF2.x * f2.x + betaF2.x);
-        h2.y = __float2half(gammaF2.y * f2.y + betaF2.y);
+        h2.x = gammaH2.x * h2.x + betaH2.x;
+        h2.y = gammaH2.y * h2.y + betaH2.y;
 
         // Apply Swish if needed.
         if (params.withSwish)
