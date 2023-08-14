@@ -29,9 +29,9 @@ struct GroupNormNHWCParams
     // The input buffer. Layout NHWC.
     __half const* src;
     // The gamma scaling factor.
-    float const* gamma;
+    __half const* gamma;
     // The beta term to add in GN.
-    float const* beta;
+    __half const* beta;
     // The temporary buffer to do the global parallel reduction. Size:
     // BLOCKS_PER_BATCH x C x 2.
     float* redBuffer;

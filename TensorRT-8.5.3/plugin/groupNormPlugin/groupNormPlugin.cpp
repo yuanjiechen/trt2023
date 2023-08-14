@@ -145,7 +145,7 @@ bool GroupNormPlugin::supportsFormatCombination(
         }
         if (pos == 1 || pos == 2)
         {
-            return inOut[pos].type == DataType::kFLOAT && inOut[pos].format == TensorFormat::kLINEAR;
+            return inOut[pos].type == DataType::kHALF && inOut[pos].format == TensorFormat::kLINEAR;
         }
         if (pos == 3)
         {
@@ -197,8 +197,8 @@ int32_t GroupNormPlugin::enqueue(PluginTensorDesc const* inputDesc, PluginTensor
         mParams.withSwish = bool(mBSwish);
         mParams.dst = static_cast<half*>(outputs[0]);
         mParams.src = static_cast<half const*>(inputs[0]);
-        mParams.gamma = static_cast<float const*>(inputs[1]);
-        mParams.beta = static_cast<float const*>(inputs[2]);
+        mParams.gamma = static_cast<half const*>(inputs[1]);
+        mParams.beta = static_cast<half const*>(inputs[2]);
         mParams.redBuffer = static_cast<float*>(workspace);
         mParams.n = inputDesc[0].dims.d[0];
         mParams.h = inputDesc[0].dims.d[2];

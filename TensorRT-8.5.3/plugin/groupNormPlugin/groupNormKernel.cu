@@ -169,6 +169,7 @@ void groupNormNHWCSum(GroupNormNHWCParams const& params, cudaStream_t stream)
 template <int32_t tTHREADS_PER_BLOCK>
 __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
 {
+    __shared__ __half2 gammaH2[tTHREADS_PER_BLOCK], betaH2[tTHREADS_PER_BLOCK];
     // The instance in the batch.
     int32_t ni = blockIdx.z;
     // The channel loaded by that thread (2 channels per thread for F16x2).
@@ -185,15 +186,15 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
     }
 
     // Load gamma/beta.
-    float2 gammaF2, betaF2;
-    __half2 gammaH2(0, 0), betaH2(0, 0);
+    // __half2 gammaF2, betaF2;
+    // __half2 gammaH2(0, 0), betaH2(0, 0);
     if (ci < params.c)
     {
-        gammaF2 = *reinterpret_cast<float2 const*>(&params.gamma[ci]);
-        betaF2 = *reinterpret_cast<float2 const*>(&params.beta[ci]);
+        gammaH2[threadIdx.x] = *reinterpret_cast<half2 const*>(&params.gamma[ci]);
+        betaH2[threadIdx.x] = *reinterpret_cast<half2 const*>(&params.beta[ci]);
 
-        gammaH2 = __float22half2_rn(gammaF2);
-        betaH2 = __float22half2_rn(betaF2);
+        // gammaH2 = __float22half2_rn(gammaF2);
+        // betaH2 = __float22half2_rn(betaF2);
 
     }
 
@@ -209,7 +210,9 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
     // The last activation loaded by that block.
     int32_t hwEnd = min(hwBegin + params.hwPerBlock, params.hw);
     __half2 h2(0, 0);
-    float2 f2 = __half22float2(h2);
+    // float2 f2 = __half22float2(h2);
+    half mean_ = __float2half(mean);
+    half invStdDev_ = __float2half(invStdDev);
     // Iterate over the activations to compute the sums.
     for (int32_t hwi = hwBegin; hwi < hwEnd; ++hwi)
     {
@@ -225,15 +228,14 @@ __global__ void groupNormNHWCScaleKernel(GroupNormNHWCParams params)
 
         // Extract the two half values.
         // f2 = __half22float2(h2);
-        half mean_ = __float2half(mean);
-        half invStdDev_ = __float2half(invStdDev);
+
         // Normalize the channels.
         h2.x = (h2.x - mean_) * invStdDev_;
         h2.y = (h2.y - mean_) * invStdDev_;
 
         // Scale by gamma and add beta.
-        h2.x = gammaH2.x * h2.x + betaH2.x;
-        h2.y = gammaH2.y * h2.y + betaH2.y;
+        h2.x = gammaH2[threadIdx.x].x * h2.x + betaH2[threadIdx.x].x;
+        h2.y = gammaH2[threadIdx.x].y * h2.y + betaH2[threadIdx.x].y;
 
         // Apply Swish if needed.
         if (params.withSwish)
