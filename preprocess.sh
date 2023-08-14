@@ -1,5 +1,6 @@
 echo "preprocess"
 mkdir onnxs
+mkdir lib
 /usr/bin/python3 export_controlnet_onnx.py
 cd onnxs
 polygraphy surgeon sanitize --fold-constants controlnet_one_loop.onnx -o controlnet_one_loop_folded.onnx --save-external-data 
