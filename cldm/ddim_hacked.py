@@ -21,20 +21,11 @@ class Control_Diff_VAE(torch.nn.Module):
     def __init__(self, control_model):
         super().__init__()
         self.control_model = control_model
-        # self.vae_model = vae_model
-
-        self.device = torch.device("cuda")
-        # self.noise = torch.randn()
     
     def forward(self, img, ts, ts_df, 
                 conds_all, c_hint, 
                 a_t, a_prev, sqrt_one_minus_at):
 
-        # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
-        # model_uncond, _, _, _, _ = self.control_model(img, ts, ts_df, u_cond_txt, c_hint, return_memory_x, x_in, return_memory_x_df, x_in_df)
-        # model_output = model_uncond + 9 * (model_t - model_uncond)
-        #########################
-        # model_t, return_memory_x, x_in, return_memory_x_df, x_in_df = self.control_model(img, ts, ts_df, c_cond_txt, c_hint)
         model_t, model_uncond = self.control_model(img, ts, ts_df, conds_all, c_hint)
         model_output = model_uncond + 9 * (model_t - model_uncond)
 
@@ -45,9 +36,6 @@ class Control_Diff_VAE(torch.nn.Module):
         dir_xt = (1. - a_prev).sqrt() * e_t
 
         img = a_prev.sqrt() * pred_x0 + dir_xt #+ 0.006 * noise
-
-        # img = 1. / 0.18215 * img
-        # img = self.vae_model(img)
 
         return img #, intermediates
 
@@ -60,8 +48,6 @@ class Control_input_block(torch.nn.Module):
     def forward(self, c_hint, c_cond_txt, u_cond_txt):
         c_hint_out = self.input_block(c_hint, None)
         conds = torch.cat([c_cond_txt, u_cond_txt], dim=0)
-        # c_cond_out = self.transformer(input_ids=c_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
-        # u_cond_out = self.transformer(input_ids=u_cond_txt, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
         conds_out = self.transformer(input_ids=conds, output_hidden_states=False, return_dict=False)[0]#.last_hidden_state
         return c_hint_out, conds_out #c_cond_out, u_cond_out
 class DDIMSampler(object):
@@ -103,6 +89,11 @@ class DDIMSampler(object):
                 self.context = model.create_execution_context()
                 self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(model)
                 self.out_tensor = torch.zeros([1, 4, 32, 48], dtype=torch.float32, device=self.device)
+                self.input_name, self.output_name = [], []
+                for i in range(model.num_bindings):
+                    if model.binding_is_input(i): self.input_name.append(model.get_binding_name(i))
+                    else: self.output_name.append(model.get_binding_name(i))
+                self.graph_exec = self.get_cuda_graph()
 
         if self.input_block_use_trt:
             with open("hint_block_fp16.engine", 'rb') as f, trt.Runtime(logger) as runtime:
@@ -113,6 +104,26 @@ class DDIMSampler(object):
                 self.conds_all_trt = torch.zeros([2, 77, 768], dtype=torch.float32, device=self.device)
                 # self.c_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
                 # self.u_cond_txt_trt = torch.zeros([1, 77, 768], dtype=torch.float32, device=self.device)
+
+    def get_cuda_graph(self):
+        with open("controlnet_one_loop.pkl", "rb") as f:
+            inputs = pickle.load(f)
+
+        for i, inp in enumerate(inputs):
+            memcopy_device_to_device(self.bindings[i], inp.cuda().data_ptr(), self.inputs[i].nbytes)
+            # cuda_inputs.append(inp.cuda())
+            self.context.set_tensor_address(self.input_name[i], self.bindings[i])
+
+        self.context.set_tensor_address(self.output_name[0], self.outputs[0].device)
+
+        self.context.execute_async_v3(self.stream) # important
+        cudart.cudaStreamBeginCapture(self.stream, cudart.cudaStreamCaptureMode(0))
+        self.context.execute_async_v3(self.stream)
+
+        err, graph = cudart.cudaStreamEndCapture(self.stream)
+        err, graph_exec = cudart.cudaGraphInstantiate(graph, 0)
+        print(err)
+        return graph_exec
 
     def register_buffer(self, name, attr):
         if type(attr) == torch.Tensor:
@@ -223,8 +234,7 @@ class DDIMSampler(object):
         c_hint = torch.cat([cond['c_concat']], 1) #cond['c_concat'] #
 
         u_cond_txt = torch.cat([unconditional_conditioning['c_crossattn']], 1).to(torch.int32) #unconditional_conditioning['c_crossattn'].to(torch.int32) #
-        # print(c_cond_txt, u_cond_txt)
-        # u_hint = torch.cat(unconditional_conditioning['c_concat'], 1)    
+
         ############
         # with open("hint_block.pkl", "wb+") as f:
         #     pickle.dump([c_hint, c_cond_txt, u_cond_txt], f)
@@ -239,12 +249,9 @@ class DDIMSampler(object):
             cudart.cudaStreamSynchronize(self.stream_hint)
             memcopy_device_to_device(self.c_hint_trt.data_ptr(), self.outputs_hint[0].device, self.outputs_hint[0].nbytes)
             memcopy_device_to_device(self.conds_all_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
-            # memcopy_device_to_device(self.c_cond_txt_trt.data_ptr(), self.outputs_hint[1].device, self.outputs_hint[1].nbytes)
-            # memcopy_device_to_device(self.u_cond_txt_trt.data_ptr(), self.outputs_hint[2].device, self.outputs_hint[2].nbytes)
+
             c_hint = self.c_hint_trt.contiguous()
             conds_all = self.conds_all_trt.contiguous()
-            # c_cond_txt = self.c_cond_txt_trt.contiguous()
-            # u_cond_txt = self.u_cond_txt_trt.contiguous()
         else:
             # c_hint, c_cond_txt, u_cond_txt = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
             c_hint, conds_all = self.control_input_block(c_hint, c_cond_txt, u_cond_txt)
@@ -257,48 +264,23 @@ class DDIMSampler(object):
             ts_df = self.model.model.diffusion_model.step_dict[i] #steps[i].item()
 
             if self.control_net_use_trt:
-                # if i == 0: self.context.set_tensor_address("input.1", img.data_ptr())
-                # else: self.context.set_tensor_address("input.1", self.outputs[0].device)
-                # self.context.set_tensor_address("onnx::Slice_1", ts.data_ptr())
-                # self.context.set_tensor_address("onnx::Slice_2", ts_df.data_ptr())
-                # self.context.set_tensor_address("onnx::MatMul_3", c_cond_txt.data_ptr())
-                # self.context.set_tensor_address("onnx::Add_4", c_hint.data_ptr())
-                # self.context.set_tensor_address("onnx::MatMul_5", u_cond_txt.data_ptr())
-                # self.context.set_tensor_address("onnx::Div_6", self.alphas[index].data_ptr())
-                # self.context.set_tensor_address("onnx::Sub_7", self.alphas_prev[index].data_ptr())
-                # self.context.set_tensor_address("onnx::Mul_8", self.sqrt_one_minus_alphas[index].data_ptr())
-                # self.context.set_tensor_address("24648", self.outputs[0].device)
-                # self.context.execute_async_v3(self.stream)
+                memcopy_device_to_device(self.bindings[0], img.data_ptr(), self.inputs[0].nbytes)
+                memcopy_device_to_device(self.bindings[1], ts.data_ptr(), self.inputs[1].nbytes)
+                memcopy_device_to_device(self.bindings[2], ts_df.data_ptr(), self.inputs[2].nbytes)
+                if i == 0:
+                    memcopy_device_to_device(self.bindings[3], conds_all.data_ptr(), self.inputs[3].nbytes)
+                    memcopy_device_to_device(self.bindings[4], c_hint.data_ptr(), self.inputs[4].nbytes)
+                memcopy_device_to_device(self.bindings[5], self.alphas[index].data_ptr(), self.inputs[5].nbytes)
+                memcopy_device_to_device(self.bindings[6], self.alphas_prev[index].data_ptr(), self.inputs[6].nbytes)
+                memcopy_device_to_device(self.bindings[7], self.sqrt_one_minus_alphas[index].data_ptr(), self.inputs[7].nbytes)
 
-                self.bindings[0] = img.data_ptr()
-                # else: self.bindings[0] = self.outputs[0].device
-                self.bindings[1] = ts.data_ptr()
-                self.bindings[2] = ts_df.data_ptr()
-                self.bindings[3] = conds_all.data_ptr()
-                self.bindings[4] = c_hint.data_ptr()
-                # self.bindings[5] = u_cond_txt.data_ptr()
-                self.bindings[5] = self.alphas[index].data_ptr()
-                self.bindings[6] = self.alphas_prev[index].data_ptr()
-                self.bindings[7] = self.sqrt_one_minus_alphas[index].data_ptr()         
-                self.context.execute_async_v2(
-                    bindings=self.bindings,
-                    stream_handle=self.stream)
+                cudart.cudaGraphLaunch(self.graph_exec, self.stream)
                 cudart.cudaStreamSynchronize(self.stream)
                 memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
                 img = self.out_tensor  
 
             else:
-                # with open("controlnet_one_loop.pkl", "wb+") as f:
-                #     pickle.dump([img, ts, ts_df, conds_all, c_hint, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index]], f)
-                # raise
-                # torch.onnx.export(self.full_model, (img, ts, ts_df, c_cond_txt, c_hint, u_cond_txt, u_hint, alphas[index], alphas_prev[index], sqrt_one_minus_alphas[index], sigmas[index]), "./onnxs/controlnet_one_loop.onnx", opset_version=17, do_constant_folding=True)
-                # print("end")
-                # raise
                 img = self.full_model(img, ts, ts_df, conds_all, c_hint, self.alphas[index], self.alphas_prev[index], self.sqrt_one_minus_alphas[index])#, sigmas[index])
-            #########################
-            # if self.control_net_use_trt:
-            #     memcopy_device_to_device(self.out_tensor.data_ptr(), self.outputs[0].device, self.outputs[0].nbytes)
-            #     img = self.out_tensor   
 
 
-        return img #, intermediates
+        return img 
